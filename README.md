@@ -11,7 +11,7 @@ Most analyses performed can be reproduced using the Docker container mpcoll2/eeg
 docker run -it -v $PATHTODATA$ mpcoll2/eeg_2020:latest python $script.py$
 ```
 
-SCR analyses as ewell as computation models specification and fitting was done in Matlab using the HFT toolbox and the VBA toolbox.
+SCR analyses as well as computation models specification and fitting was done in Matlab using the HFT toolbox and the VBA toolbox.
 
 ## 0- Import raw data
 
@@ -32,9 +32,9 @@ The *scr_glm_pspm.m* script imports the scr data in PsPM, performs the data clea
 
 ## 2- Computational models
 
-### 1.1
+The computational models are described in their respective code in /code/compomodels. The MATLAB script comp_fitmodels.m fits the models specified at the start of the script and performs model comparison. For each model, it outputs the trial-wise values in a mat/csv files, some figures and a .mat file containing the results of the model comparison.
 
-## 2- EMG
+## 3- EMG
 
 
 ## 3- Computational modelling
