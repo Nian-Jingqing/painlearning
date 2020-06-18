@@ -36,7 +36,7 @@ param = {
          'ticksfontsize': 22,
          'legendfontsize': 20,
          # Downsample to this frequency prior to analysis
-         'testresampfreq': 512,
+         'testresampfreq': 256,
          # Excluded parts
          'excluded': ['sub-24', 'sub-31', 'sub-35', 'sub-51']
          }

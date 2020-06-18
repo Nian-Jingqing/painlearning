@@ -67,64 +67,64 @@ mod_data = pd.read_csv('/data/derivatives/task-fearcond_alldata.csv')
 regvars = ['vhat', 'sa1hat', 'sa2hat']
 regvarsnames = ['Expectation', 'Irr. uncertainty', 'Est. uncertainty']
 
-# betas, betasnp = [], []
-#
-# # Loop participants and load single trials file
-# allbetasnp, all_epos = [], []
-#
-# for p in part:
-#
-#     df = mod_data[mod_data['sub'] == p]
-#
-#     # Load single epochs file (cotains one epoch/trial)
-#     epo = read_tfrs(opj('/data/derivatives',  p, 'eeg',
-#                         p + '_task-fearcond_epochs-tfr.h5'))[0]
-#
-#     # Drop bad trials and get indices
-#     goodtrials = np.where(df['badtrial'] == 0)
-#
-#     # Get external data for this part
-#
-#     if len(df) != 0:
-#         df = df.iloc[goodtrials]
-#
-#         epo = epo[goodtrials[0]]
-#         # Bin trials by value and plot GFP
-#
-#         # Standardize data before regression
-#         # EEG data
-#         # Vectorize, Zscore,
-#         clf = make_pipeline(Vectorizer(),
-#                             StandardScaler(),
-#                             LinearRegression(n_jobs=param['njobs']))
-#
-#         clf.fit(epo.data, df['sa1hat'])
-#
-#         # Standardize data
-#         for regvar in regvars:
-#             df[regvar + '_z'] = ((df[regvar]-np.average(df[regvar]))
-#                                  / np.std(df[regvar]))
-#
-#         no = [r + '_z' for r in regvars]
-#         # Fit regression
-#         clf.fit(epo.data, df[no])
-#
-#         betasnp = []
-#         for idx, regvar in enumerate(no):
-#             out = np.reshape(clf['linearregression'].coef_[idx],
-#                              (epo.data.shape[1], epo.data.shape[2],
-#                               epo.data.shape[3]))
-#             betasnp.append(out)
-#
-#         allbetasnp.append(np.stack(betasnp))
-#
-#
-# # Stack all data
-# allbetas = np.stack(allbetasnp)
-#
-# # Create MNE EpochsArray
-#
-# np.save(opj(outpath, 'ols_2ndlevel_allbetas.npy'), allbetas)
+betas, betasnp = [], []
+
+# Loop participants and load single trials file
+allbetasnp, all_epos = [], []
+
+for p in part:
+
+    df = mod_data[mod_data['sub'] == p]
+
+    # Load single epochs file (cotains one epoch/trial)
+    epo = read_tfrs(opj('/data/derivatives',  p, 'eeg',
+                        p + '_task-fearcond_epochs-tfr.h5'))[0]
+
+    # Drop bad trials and get indices
+    goodtrials = np.where(df['badtrial'] == 0)
+
+    # Get external data for this part
+
+    if len(df) != 0:
+        df = df.iloc[goodtrials]
+
+        epo = epo[goodtrials[0]]
+        # Bin trials by value and plot GFP
+
+        # Standardize data before regression
+        # EEG data
+        # Vectorize, Zscore,
+        clf = make_pipeline(Vectorizer(),
+                            StandardScaler(),
+                            LinearRegression(n_jobs=param['njobs']))
+
+        clf.fit(epo.data, df['sa1hat'])
+
+        # Standardize data
+        for regvar in regvars:
+            df[regvar + '_z'] = ((df[regvar]-np.average(df[regvar]))
+                                 / np.std(df[regvar]))
+
+        no = [r + '_z' for r in regvars]
+        # Fit regression
+        clf.fit(epo.data, df[no])
+
+        betasnp = []
+        for idx, regvar in enumerate(no):
+            out = np.reshape(clf['linearregression'].coef_[idx],
+                             (epo.data.shape[1], epo.data.shape[2],
+                              epo.data.shape[3]))
+            betasnp.append(out)
+
+        allbetasnp.append(np.stack(betasnp))
+
+
+# Stack all data
+allbetas = np.stack(allbetasnp)
+
+# Create MNE EpochsArray
+
+np.save(opj(outpath, 'ols_2ndlevel_allbetas.npy'), allbetas)
 
 # Grand average
 # #########################################################################

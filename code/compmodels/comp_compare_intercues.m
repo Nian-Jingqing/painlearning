@@ -16,7 +16,7 @@ p.customfuncpath = ['/home/mp/gdrive/projects/'...
 p.datafile =  ['/media/mp/lxhdd/2020_painlearning/derivatives'...
                 '/task-fearcond_scr_glmresp_processed.mat'];
 % Ouput path
-m.path = '/media/mp/lxhdd/2020_painlearning/derivatives/compmodels';
+m.path = '/media/mp/lxhdd/2020_painlearning/derivatives/compmodels/compare_intercue';
 if ~exist(m.path, 'dir')
    mkdir(m.path)
 end
@@ -27,21 +27,22 @@ addpath(genpath(p.VBA_path));
 addpath(genpath(p.customfuncpath));
 
 % Name to give to comparison file
-p.comparison_name = 'comp_all_'
+p.comparison_name = 'compare_intercues_'
+
 
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Parameters
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+
 % Models to run using names below or 'all'
-p.to_run =  {'RW_nointercue', 'PH_nointercue', 'HGF2_nointercue',
-             'HGF3_nointercue', 'RW_intercue', 'PH_intercue',
-             'HGF2_intercue', 'HGF3_intercue'};
+p.to_run =  {};
 
 
 % Models to compare using VBA (if empty compares model that were ran)
 % Use this to compare models without running any
-p.to_compare =  {};
+p.to_compare =  {'RW_intercue', 'PH_intercue',
+                 'HGF2_intercue', 'HGF3_intercue'};
 p.comp_families = {};
 
 % General model parameters

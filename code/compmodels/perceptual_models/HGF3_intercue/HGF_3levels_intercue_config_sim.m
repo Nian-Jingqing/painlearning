@@ -4,7 +4,7 @@ function c = HGF_3levels_config
 % Contains the configuration for the Hierarchical Gaussian Filter (HGF)
 % for binary inputs in the absence of perceptual uncertainty.
 %
-% The HGF is the model introduced in 
+% The HGF is the model introduced in
 %
 % Mathys C, Daunizeau J, Friston, KJ, and Stephan KE. (2011). A Bayesian foundation
 % for individual learning under uncertainty. Frontiers in Human Neuroscience, 5:39.
@@ -26,10 +26,10 @@ function c = HGF_3levels_config
 % The HGF configuration consists of the priors of parameters and initial values. All priors are
 % Gaussian in the space where the quantity they refer to is estimated. They are specified by their
 % sufficient statistics: mean and variance (NOT standard deviation).
-% 
+%
 % Quantities are estimated in their native space if they are unbounded (e.g., the omegas). They are
 % estimated in log-space if they have a natural lower bound at zero (e.g., the sigmas).
-% 
+%
 % Parameters can be fixed (i.e., set to a fixed value) by setting the variance of their prior to
 % zero. Aside from being useful for model comparison, the need for this arises whenever the scale
 % and origin at the j-th level are arbitrary. This is the case if the observation model does not
@@ -39,11 +39,11 @@ function c = HGF_3levels_config
 % Fitted trajectories can be plotted by using the command
 %
 % >> tapas_hgf_binary_plotTraj(est)
-% 
+%
 % where est is the stucture returned by tapas_fitModel. This structure contains the estimated
 % perceptual parameters in est.p_prc and the estimated trajectories of the agent's
 % representations (cf. Mathys et al., 2011). Their meanings are:
-%              
+%
 %         est.p_prc.mu_0       row vector of initial values of mu (in ascending order of levels)
 %         est.p_prc.sa_0       row vector of initial values of sigma (in ascending order of levels)
 %         est.p_prc.rho        row vector of rhos (representing drift; in ascending order of levels)
@@ -123,7 +123,7 @@ c.irregular_intervals = false;
 % Initial mus and sigmas
 % Format: row vectors of length n_levels
 % For all but the first two levels, this is usually best
-% kept fixed to 1 (determines origin on x_i-scale). The 
+% kept fixed to 1 (determines origin on x_i-scale). The
 % first level is NaN because it is determined by the second,
 % and the second implies neutrality between outcomes when it
 % is centered at 0.
@@ -152,8 +152,8 @@ c.logkasa = [     0,      0];
 % Omegas
 % Format: row vector of length n_levels.
 % Undefined (therefore NaN) at the first level.
-c.ommu = [NaN,  -3  -6];
-c.omsa = [NaN, 5^2, 5^2];
+c.ommu = [NaN,  -5  -10];
+c.omsa = [NaN, 8^2, 8^2];
 
 % Gather prior settings in vectors
 c.priormus = [

@@ -33,7 +33,7 @@ param = {
          # Random state to get same permutations each time
          'random_state': 23,
          # Downsample to this frequency prior to analysis
-         'testresampfreq': 128,
+         'testresampfreq': 256,
          # excluded participants
          'excluded': ['sub-24', 'sub-31', 'sub-35', 'sub-51'],
          # Use FDR (if false witll use TFCE)
@@ -75,8 +75,9 @@ for p in part:
     epo = mne.read_epochs(opj('/data/derivatives',  p, 'eeg',
                               p + '_task-fearcond_cues_singletrials-epo.fif'))
 
-    # downsample
-    epo = epo.resample(param['testresampfreq'])
+    # downsample if necessary
+    if epo.info['sfreq'] != param['testresampfreq']:
+        epo = epo.resample(param['testresampfreq'])
 
     # Drop bad trials and get indices
     goodtrials = np.where(df['badtrial'] == 0)

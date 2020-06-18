@@ -35,25 +35,13 @@ if not os.path.exists(outfigpath):
     os.mkdir(outfigpath)
 
 param = {
-         # Njobs for permutations
-         'njobs': 15,
-         # New sampling rate to downsample single trials
-         'resamp': 256,
          # Alpha Threshold
          'alpha': 0.05,
-         # Number of permutations
-         'nperms': 10000,
-         # Threshold to reject trials
-         'erpreject': dict(eeg=500e-6),
-         # Random state to get same permutations each time
-         'random_state': 23,
          # Font sizez in plot
          'titlefontsize': 24,
          'labelfontsize': 24,
          'ticksfontsize': 22,
          'legendfontsize': 20,
-         # Downsample to this frequency prior to analysis
-         'testresampfreq': 512,
          # Excluded parts
          'excluded': ['sub-24', 'sub-31', 'sub-35', 'sub-51'],
          # Color palette
@@ -97,8 +85,8 @@ anova_data = np.stack(anova_data)
 # # Take difference of interest for each part
 diff_data = np.empty((2,) + anova_data.shape[1:])
 for s in range(anova_data.shape[1]):
-    diff_data[0, s, ::] = anova_data[0, s, :] - anova_data[1, s, :]
-    diff_data[1, s, ::] = anova_data[2, s, :] - anova_data[3, s, :]
+    diff_data[0, s, ::] = (anova_data[0, s, :] - anova_data[1, s, :])/anova_data[0, s, :]*100
+    diff_data[1, s, ::] = (anova_data[2, s, :] - anova_data[3, s, :])/anova_data[1, s, :]*100
 
 diff_data = np.squeeze(diff_data)
 
@@ -107,9 +95,8 @@ diff_data = np.squeeze(diff_data)
 pvals = np.load(opj(outpath, 'cues4_tfr_anova_pvals.npy'))
 Fvals = np.load(opj(outpath, 'cues4_tfr_anova_Fvals.npy'))
 p_plot = data[cond][0].copy()
-p_plot.data.shape
-p_plot.data = np.swapaxes(pvals, 2, 0)
-p_plot.data = np.where((1-p_plot.data) > (1-param['alpha']), 1, 0)
+p_plot.data = pvals
+p_plot.data = np.where(p_plot.data < param['alpha'], 1, 0)
 
 # ###########################################################################
 # Make plot
@@ -159,33 +146,7 @@ def topo_freqs(p_plotin, foi, chan, time, gavg, dcond, ax, pal, vmin=-6,
                vmax=6):
     # Colour palette for plotting
     c = 'CS-1'
-    fidx = np.arange(np.where(gavg[c].freqs == foi[0])[0],
-                     np.where(gavg[c].freqs == foi[1])[0])
 
-    times = gavg[c].times
-    tidx = np.arange(np.argmin(np.abs(times - time[0])),
-                     np.argmin(np.abs(times - time[1])))
-
-    plt_dat = dcond[:, :, fidx, :]
-    plt_dat = plt_dat[:, :, :, tidx]
-    plt_dat = np.average(plt_dat, 3)
-    plt_dat = np.average(plt_dat, 2)
-    p_dat = p_plotin.data
-    p_dat = p_dat[:, fidx, :]
-    p_dat = p_dat[:, :, tidx]
-    p_dat = np.average(p_dat, 2)
-    p_dat = np.average(p_dat, 1)
-    mask = np.where(p_dat > 0, 1, 0)
-
-    plot_topomap(np.average(plt_dat, 0),
-                 pltdat.info,
-                 show=False,
-                 cmap='viridis',
-                 vmin=-3,
-                 mask=mask,
-                 axes=ax,
-                 contours=False,
-                 vmax=3)
 
     return ax
 
@@ -216,8 +177,8 @@ for chan in ['Pz', 'POz', 'Cz', 'CPz', 'Fz']:
                     tmin=-0.5, tmax=1,
                     show=False,
                     cmap='viridis',
-                    vmin=-10,
-                    vmax=10,
+                    # vmin=-0.15,
+                    # vmax=0.15,
                     title='',
                     axes=axes[idx],
                     colorbar=False,
@@ -253,6 +214,7 @@ for chan in ['Pz', 'POz', 'Cz', 'CPz', 'Fz']:
                 show=False,
                 cmap='Greys',
                 vmin=0.1,
+                vmax=1.1,
                 title='',
                 axes=axes[len(conditions)],
                 colorbar=False,
@@ -282,7 +244,7 @@ for chan in ['Pz', 'POz', 'Cz', 'CPz', 'Fz']:
                        label="cbar1")
     cbar1 = fig.colorbar(axes[0].images[0], cax=cax,
                          orientation='vertical', aspect=10)
-    cbar1.set_label('Power (Z scored)', rotation=-90,
+    cbar1.set_label('Power (log ratio)', rotation=-90,
                     labelpad=16, fontdict={'fontsize': param['labelfontsize']})
     cbar1.ax.tick_params(labelsize=param['ticksfontsize'])
 
@@ -314,7 +276,7 @@ for chan in ['Pz', 'POz', 'Cz', 'CPz', 'Fz']:
     boxplot_freqs(foi, chan, time, gavg, data_all, axes[-1], param['palette'])
     axes[-1].set_xlabel('Condition',
                         fontdict={'fontsize': param['labelfontsize']})
-    axes[-1].set_ylabel('Z scored power',
+    axes[-1].set_ylabel('Power (log ratio)',
                         fontdict={'fontsize': param['labelfontsize']})
     axes[-1].tick_params(axis="both", labelsize=param['ticksfontsize'])
     # foi = [4, 6]
@@ -325,10 +287,38 @@ for chan in ['Pz', 'POz', 'Cz', 'CPz', 'Fz']:
     foi = [20, 21]
     time = [0.6, 1]
 
+    fidx = np.arange(np.where(gavg[c].freqs == foi[0])[0],
+                     np.where(gavg[c].freqs == foi[1])[0])
+
+    times = gavg[c].times
+    tidx = np.arange(np.argmin(np.abs(times - time[0])),
+                     np.argmin(np.abs(times - time[1])))
+
+    p_dat = p_plot.data
+    p_dat = p_dat[:, fidx, :]
+    p_dat = p_dat[:, :, tidx]
+    p_dat = np.average(p_dat, 2)
+    p_dat = np.average(p_dat, 1)
+    mask = np.where(p_dat > 0, 1, 0)
+
     for idx, c in enumerate(conditions):
+
         dcond = data_all[idx, :]
-        topo_freqs(p_plot, foi, chan, time, gavg, dcond, axes[idx],
-                   param['palette'])
+        plt_dat = dcond[:, :, fidx, :]
+        plt_dat = plt_dat[:, :, :, tidx]
+        plt_dat = np.average(plt_dat, 3)
+        plt_dat = np.average(plt_dat, 2)
+
+        plot_topomap(np.average(plt_dat, 0),
+                     pltdat.info,
+                     show=False,
+                     cmap='viridis',
+                     # vmin=-0.15,
+                     # vmax=0.15,
+                     mask=mask,
+                     axes=axes[idx],
+                     contours=False)
+
         axes[idx].set_title(c, fontdict={'fontsize': param['titlefontsize']})
     # Get data of interest
 
@@ -341,7 +331,7 @@ for chan in ['Pz', 'POz', 'Cz', 'CPz', 'Fz']:
     cax = fig2.add_axes([0.18, 0.52, 0.1, 0.05], label="cbar1")
     cbar1 = fig2.colorbar(axes[0].images[0], cax=cax,
                           orientation='horizontal', aspect=20)
-    cbar1.set_label('Z scored power', rotation=0,
+    cbar1.set_label('Power (log ratio)', rotation=0,
                     labelpad=10,
                     fontdict={'fontsize': param['labelfontsize']-5})
     cbar1.ax.tick_params(labelsize=param['ticksfontsize'])
@@ -351,7 +341,7 @@ for chan in ['Pz', 'POz', 'Cz', 'CPz', 'Fz']:
 
 
 pvals = np.load(opj(outpath, 'cuesdiff_tfr_ttest_pvals.npy'))
-pvals = np.swapaxes(pvals, 0, 2)
+# pvals = np.swapaxes(pvals, 0, 2)
 
 # Same thing but for difference
 for chan in ['Pz', 'POz', 'Cz', 'CPz', 'Fz']:
@@ -379,8 +369,8 @@ for chan in ['Pz', 'POz', 'Cz', 'CPz', 'Fz']:
                     tmin=-0.5, tmax=1,
                     show=False,
                     cmap='viridis',
-                    vmin=-7,
-                    vmax=7,
+                    # vmin=-0.15,
+                    # vmax=0.15,
                     title='',
                     axes=axes[idx],
                     colorbar=False,
@@ -412,8 +402,8 @@ for chan in ['Pz', 'POz', 'Cz', 'CPz', 'Fz']:
                 tmin=-0.2, tmax=1,
                 show=False,
                 cmap='Greys',
-                vmin=0.1,
-                vmax=1.1,
+                # vmin=0.1,
+                # vmax=1.1,
                 title='',
                 axes=axes[len(conditions)],
                 colorbar=False
@@ -439,7 +429,7 @@ for chan in ['Pz', 'POz', 'Cz', 'CPz', 'Fz']:
                        label="cbar1")
     cbar1 = fig.colorbar(axes[0].images[0], cax=cax,
                          orientation='vertical', aspect=10)
-    cbar1.set_label('Power (Z scored)', rotation=-90,
+    cbar1.set_label('Power (log ratio)', rotation=-90,
                     labelpad=18, fontdict={'fontsize': param['labelfontsize']})
     cbar1.ax.tick_params(labelsize=param['ticksfontsize'])
 
@@ -484,7 +474,7 @@ for chan in ['Pz', 'POz', 'Cz', 'CPz', 'Fz']:
                 medianprops={'zorder': 11, 'alpha': 0.5})
     axes[-1].set_xlabel('',
                         fontdict={'fontsize': param['labelfontsize']})
-    axes[-1].set_ylabel('Z scored power',
+    axes[-1].set_ylabel('Power (log ratio)',
                         fontdict={'fontsize': param['labelfontsize']})
     axes[-1].tick_params(axis="both", labelsize=param['ticksfontsize'])
 
@@ -510,11 +500,11 @@ for chan in ['Pz', 'POz', 'Cz', 'CPz', 'Fz']:
                      pltdat.info,
                      show=False,
                      cmap='viridis',
-                     vmin=-3,
+                     # vmaxm=0.15,
+                     # vmin=-0.15,
                      mask=mask,
                      axes=axes[idx],
-                     contours=False,
-                     vmax=3)
+                     contours=False)
 
         axes[idx].set_title(c, fontdict={'fontsize': param['titlefontsize']})
     # Get data of interest
@@ -528,7 +518,7 @@ for chan in ['Pz', 'POz', 'Cz', 'CPz', 'Fz']:
     cax = fig2.add_axes([0.27, 0.40, 0.1, 0.05], label="cbar1")
     cbar1 = fig2.colorbar(axes[0].images[0], cax=cax,
                           orientation='horizontal', aspect=20)
-    cbar1.set_label('Z scored power', rotation=0,
+    cbar1.set_label('Power (log ratio)', rotation=0,
                     labelpad=10,
                     fontdict={'fontsize': param['labelfontsize']-5})
     cbar1.ax.tick_params(labelsize=param['ticksfontsize'])

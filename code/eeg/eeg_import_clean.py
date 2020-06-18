@@ -88,7 +88,7 @@ param = {
                          '56': ['Iz', 'P10'],
                          '57': ['Oz', 'O1']},
          # Visually identified bad ICA (For PCA == 40)
-         'badica': {'23': [2],
+         'badica': {'23': [2, 8],
                     '24': [0, 22],
                     '25': [1, 9],
                     '26': [0, 5, 15],

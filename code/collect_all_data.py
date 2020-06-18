@@ -6,7 +6,7 @@
 import pandas as pd
 from os.path import join as opj
 from bids import BIDSLayout
-
+import numpy as np
 ###############################
 # Parameters
 ###############################
@@ -16,6 +16,13 @@ part = ['sub-' + s for s in layout.get_subject()]
 # Remove stupid pandas warning
 pd.options.mode.chained_assignment = None  # default='warn'
 
+param = {
+         # excluded participants
+         'excluded': ['sub-24', 'sub-31', 'sub-35', 'sub-51'],
+
+         }
+# Remove excluded part
+part = [p for p in part if p not in param['excluded']]
 
 # Load Model data
 
@@ -38,14 +45,23 @@ for p in part:
                           p + '_task-fearcond_nfrauc.csv'))
 
     subdat = comp_data[comp_data['sub'] == p]
-    count = 0
-    for idx, c in enumerate(subdat['cond']):
-        if c == 'CS++':
-            subdat['nfr_auc'][idx] = nfr['nfr_auc'][count]
-            subdat['nfr_auc_z'][idx] = nfr['nfr_auc_z'][count]
-            subdat['ratings'][idx] = nfr['ratings'][count]
-            subdat['ratings_z'][idx] = nfr['ratings_z'][count]
-            count += 1
+
+    nfr_auc = np.asarray(subdat['nfr_auc'])
+    nfr_auc[subdat.cond == 'CS++'] = list(list(nfr['nfr_auc']))
+    subdat['nfr_auc'] = nfr_auc
+
+    nfr_auc_z = np.asarray(subdat['nfr_auc_z'])
+    nfr_auc_z[subdat.cond == 'CS++'] = list(list(nfr['nfr_auc_z']))
+    subdat['nfr_auc_z'] = nfr_auc_z
+
+    ratings = np.asarray(subdat['ratings'])
+    ratings[subdat.cond == 'CS++'] = list(list(nfr['ratings']))
+    subdat['ratings'] = ratings
+
+    ratings_z = np.asarray(subdat['ratings_z'])
+    ratings_z[subdat.cond == 'CS++'] = list(list(nfr['ratings_z']))
+    subdat['ratings_z'] = ratings_z
+
     subdats.append(subdat)
 
 comp_data = pd.concat(subdats)
@@ -61,7 +77,6 @@ if not list(erps_meta['participant_id']) == list(comp_data['sub']):
 
 comp_data = pd.concat([comp_data.reset_index(), erps_meta.reset_index()],
                       axis=1)
-
 
 # Add questionnaires and socio
 quest = pd.read_csv('/data/source/participants.tsv', sep='\t')

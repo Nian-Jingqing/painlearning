@@ -12,8 +12,8 @@ from bids import BIDSLayout
 from mne.stats import ttest_1samp_no_p
 from mne.time_frequency import read_tfrs
 import scipy
-from mne.stats import spatio_temporal_cluster_1samp_test as perm1samp
-from functools import partial
+# from mne.stats import spatio_temporal_cluster_1samp_test as perm1samp
+# from functools import partial
 
 
 ###############################
@@ -45,8 +45,6 @@ param = {
          'nperms': 5000,
          # Random state to get same permutations each time
          'random_state': 23,
-         # Downsample to this frequency prior to analysis
-         'testresampfreq': 128,
          # excluded participants
          'excluded': ['sub-24', 'sub-31', 'sub-35', 'sub-51'],
 
@@ -173,8 +171,8 @@ np.save(opj(outpath, 'resamp_freqs.npy'), data['CS+'][0].freqs)
 shapet = diff_data.shape
 testdata = np.reshape(diff_data, (shapet[0], shapet[1]*shapet[2]*shapet[3]))
 
-tval, pval = scipy.stats.ttest_1samp(diff_data, 0)
-pval = scipy.stats.t.sf(np.abs(tval), shapea[0]-1)*2  # two-sided pvalue
+tval = ttest_1samp_no_p(diff_data, sigma=1e-3)
+pval = scipy.stats.t.sf(np.abs(tval), shapet[0]-1)*2  # two-sided pvalue
 _, pval = mne.stats.fdr_correction(pval, alpha=param['alpha'])
 
 # ##############################################################

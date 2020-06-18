@@ -25,7 +25,7 @@ pd.options.mode.chained_assignment = None  # default='warn'
 # Outpath for analysis
 outpath = '/data/derivatives/statistics/erps_modelfree_anova'
 # Outpath for figures
-outfigpath = '/data/derivatives/figures'
+outfigpath = '/data/derivatives/figures/erps_modelfree_anova'
 
 if not os.path.exists(outpath):
     os.mkdir(outpath)
@@ -33,25 +33,15 @@ if not os.path.exists(outfigpath):
     os.mkdir(outfigpath)
 
 param = {
-         # Njobs for permutations
-         'njobs': 15,
-         # New sampling rate to downsample single trials
-         'resamp': 250,
          # Alpha Threshold
-         'alpha': 0.05,
-         # Number of permutations
-         'nperms': 10000,
-         # Threshold to reject trials
-         'erpreject': dict(eeg=500e-6),
-         # Random state to get same permutations each time
-         'random_state': 23,
+         'alpha': 0.01,
          # Font sizez in plot
          'titlefontsize': 24,
          'labelfontsize': 24,
          'ticksfontsize': 22,
          'legendfontsize': 20,
          # Downsample to this frequency prior to analysis
-         'testresampfreq': 512,
+         'testresampfreq': 256,
          # Excluded parts
          'excluded': ['sub-24', 'sub-31', 'sub-35', 'sub-51']
          }
@@ -119,12 +109,11 @@ times = np.load(opj(outpath, 'resamp_times.npy'))
 ##############################
 
 # TO MOVE IN PARAM
-alpha = 0.05
 # color limits for topomaps
 cue_mvzlims = [-7.5, 7.5]
 cue_fzlims = [0, 30]
 dif_mvzlims = [-5, 5]
-dif_tzlims = [0, np.max(ttest_tvals)+1]
+dif_tzlims = [-np.max(ttest_tvals), np.max(ttest_tvals)+1]
 # Plot descritive topo data
 plot_times = [0, 0.1, 0.300, 0.500, 0.8]
 chan_to_plot = ['POz', 'CPz', 'Fz', 'Pz', 'Oz']
@@ -176,7 +165,7 @@ for tidx, t in enumerate(times_pos):
     plot_data = anovaF[t, :]
     im2, _ = mne.viz.plot_topomap(plot_data,
                                   pos=data[cond][0].info,
-                                  mask=anovapvals[t, :] < alpha,
+                                  mask=anovapvals[t, :] < param['alpha'],
                                   mask_params=dict(marker='o',
                                                    markerfacecolor='w',
                                                    markeredgecolor='k',
@@ -254,7 +243,7 @@ for tidx, t in enumerate(times_pos):
 
     im2, _ = mne.viz.plot_topomap(plot_data,
                                   pos=data_diff[cond][0].info,
-                                  mask=ttest_pvals[t, :] < alpha,
+                                  mask=ttest_pvals[t, :] < param['alpha'],
                                   mask_params=dict(marker='o',
                                                    markerfacecolor='w',
                                                    markeredgecolor='k',
@@ -340,17 +329,17 @@ for chan in chan_to_plot:
                 dpi=600, bbox_inches='tight')
 
     # Get p values
-    # p_vals = np.squeeze(anovapvals[:, pick])
-    #
-    # ymin = -1.2
-    # ymax = -1
-    # for tidx, t in enumerate(gavg[conditions[0]].times*1000):
-    #     if p_vals[tidx] < alpha:
-    #         line_axis[0].vlines(t, ymin=ymin,
-    #                             ymax=ymax,
-    #                             linestyle="-",
-    #                             colors="red",
-    #                             alpha=0.1)
+    p_vals = np.squeeze(anovapvals[:, pick])
+
+    ymin = -1.2
+    ymax = -1
+    for tidx, t in enumerate(gavg[conditions[0]].times*1000):
+        if p_vals[tidx] < param['alpha']:
+            line_axis.vlines(t, ymin=ymin,
+                             ymax=ymax,
+                             linestyle="-",
+                             colors="red",
+                             alpha=0.1)
     fig.tight_layout()
     fig.savefig(opj(outfigpath, 'fig_lineplot_4cond_' + chan + '.svg'),
                 dpi=600, bbox_inches='tight')
@@ -406,7 +395,7 @@ for chan in chan_to_plot:
     ymin = -1.2
     ymax = -1
     for tidx, t in enumerate(gavg[conditions[0]].times*1000):
-        if p_vals[tidx] < alpha:
+        if p_vals[tidx] < param['alpha']:
             line_axis.vlines(t, ymin=ymin,
                              ymax=ymax,
                              linestyle="-",

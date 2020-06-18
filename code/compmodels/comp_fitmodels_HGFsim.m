@@ -27,16 +27,16 @@ addpath(genpath(p.VBA_path));
 addpath(genpath(p.customfuncpath));
 
 % Name to give to comparison file
-p.comparison_name = 'comp_all_'
+p.comparison_name = '';
+
 
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Parameters
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Models to run using names below or 'all'
-p.to_run =  {'RW_nointercue', 'PH_nointercue', 'HGF2_nointercue',
-             'HGF3_nointercue', 'RW_intercue', 'PH_intercue',
-             'HGF2_intercue', 'HGF3_intercue'};
+p.to_run =  {'HGF2_nointercue_sim', 'HGF3_nointercue_sim',...
+             'HGF2_intercue_sim', 'HGF3_intercue_sim'};
 
 
 % Models to compare using VBA (if empty compares model that were ran)

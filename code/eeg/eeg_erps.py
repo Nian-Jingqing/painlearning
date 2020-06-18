@@ -32,7 +32,9 @@ param = {
          'erpbaseline': -0.2,
          'erpepochend': 1,
          # Threshold to reject trials
-         'erpreject': dict(eeg=500e-6),
+         'erpreject': dict(eeg=300e-6),
+         # Threshold to reject shock trials
+         'erprejectshock': dict(eeg=500e-6),
          # New sampling rate to downsample single trials
          'resamp': 256
          }
@@ -144,6 +146,7 @@ for p in part:
                                show=False,
                                ts_args={'time_unit': 'ms'},
                                topomap_args={'time_unit': 'ms'}))
+
         evokeds[cond].save(opj(outdir, p + '_task-fearcond_' + cond
                                + '_ave.fif'))
 
@@ -183,7 +186,7 @@ for p in part:
                          tmax=param['erpepochend'],
                          preload=True,
                          verbose=False,
-                         reject=param['erpreject'])
+                         reject=param['erprejectshock'])
 
     nshocks = len(erp_shocks['shock'])
     reject_stats.loc[reject_stats.part == p,
@@ -202,6 +205,7 @@ for p in part:
                                show=False,
                                ts_args={'time_unit': 'ms'},
                                topomap_args={'time_unit': 'ms'}))
+
         evokeds[cond].save(opj(outdir, p + '_task-fearcond_' + cond
                                + '_ave.fif'))
 
@@ -250,11 +254,13 @@ for p in part:
 
     # Add bad trials to metadata
     strials_drop = erp_cues_single.copy()
-    strials_drop.drop_bad(reject=param['erpreject'])
+    strials_drop.drop_bad(reject=param['erprejectshock'])
     badtrials = [1 if len(li) > 0 else 0 for li in strials_drop.drop_log]
     erp_cues_single.metadata['badtrial'] = badtrials
 
     # Save
+    if erp_cues_single.info['sfreq'] != param['resamp']:
+        erp_cues_single.resample(param['resamp'])
     erp_cues_single.save(opj(outdir, p
                              + '_task-fearcond_cues_singletrials-epo.fif'),
                          overwrite=True)
@@ -266,7 +272,6 @@ for p in part:
                               for t in range(1, 55)]
 
     events_s['participant_id'] = p
-
     events_cues = np.asarray(events_s[['sample', 'empty', 'trialsnum']])
 
     trials_dict = dict()
@@ -291,6 +296,8 @@ for p in part:
     erp_shocks_single.metadata['badtrial'] = badtrials
 
     # Save
+    if erp_shocks_single.info['sfreq'] != param['resamp']:
+        erp_shocks_single.resample(param['resamp'])
     erp_shocks_single.save(opj(outdir, p
                                + '_task-fearcond_shock_singletrials-epo.fif'),
                            overwrite=True)

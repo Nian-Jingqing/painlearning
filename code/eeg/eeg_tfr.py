@@ -31,17 +31,17 @@ param = {
          'filtertype': 'iir',
          # Length of epochs
          'erpbaseline': -0.2,
-         'erpepochend': 1,
+         'erpepochend': 0.95,
          'tfrepochstart': -1.5,
          'tfrepochend': 1.5,
          # Threshold to reject trials
          'tfr_reject': dict(eeg=500e-6),
          # TFR parameters
-         'ttfreqs': np.arange(4, 60, 1),
-         'freqmax': 60,
-         'n_cycles': 6,
+         'ttfreqs': np.arange(4, 50, 1),
+         'freqmax': 50,
+         'n_cycles': np.arange(4, 50, 1)/2,
          'tfr_baseline_time': (-0.2, 0),
-         'tfr_baseline_mode': 'logratio',
+         'tfr_baseline_mode': 'zlogratio',
          'testresampfreq': 256,
          # Njobs to run the TFR
          'njobs': 20
@@ -257,11 +257,18 @@ for p in part:
                          n_jobs=param['njobs'],
                          average=False)
 
+    strials.apply_baseline(mode=param['tfr_baseline_mode'],
+                           baseline=param['tfr_baseline_time'])
+
     strials.crop(tmin=param['erpbaseline'],
                  tmax=param['erpepochend'])
 
     strials.save(opj(outdir,  p + '_task-fearcond_'
                      + 'shocks_epochs-tfr.h5'), overwrite=True)
+
+    # Save as npy for matlab
+    np.save(opj(outdir,  p + '_task-fearcond_'
+                + 'shocks_epochs-tfr.npy'), strials.data)
 
     report.save(opj(outdir,  p + '_task-fearcond'
                     + '_avg-tfr.html'),

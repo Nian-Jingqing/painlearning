@@ -27,22 +27,22 @@ addpath(genpath(p.VBA_path));
 addpath(genpath(p.customfuncpath));
 
 % Name to give to comparison file
-p.comparison_name = 'comp_all_'
+p.comparison_name = 'compare_families_'
 
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Parameters
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Models to run using names below or 'all'
-p.to_run =  {'RW_nointercue', 'PH_nointercue', 'HGF2_nointercue',
-             'HGF3_nointercue', 'RW_intercue', 'PH_intercue',
-             'HGF2_intercue', 'HGF3_intercue'};
+p.to_run =  {};
 
 
 % Models to compare using VBA (if empty compares model that were ran)
 % Use this to compare models without running any
-p.to_compare =  {};
-p.comp_families = {};
+p.to_compare =  {'RW_nointercue', 'PH_nointercue', 'HGF2_nointercue',
+                 'HGF3_nointercue', 'RW_intercue', 'PH_intercue',
+                 'HGF2_intercue', 'HGF3_intercue'};
+p.comp_families = {[1, 2, 3, 4], [5, 6, 7, 8]};
 
 % General model parameters
 m.optim = 'tapas_quasinewton_optim_config'; % Optimisation function
@@ -71,7 +71,6 @@ m.use_bayesian_average = 0;  % Bayesian or regular average
 % Output
 m.makeplot = 1; % Create plots after fit
 m.makeindividualplot = 0; % Create plots for each subject
-
 
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Prepare data
