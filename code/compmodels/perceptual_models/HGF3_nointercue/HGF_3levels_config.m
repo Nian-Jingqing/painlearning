@@ -127,10 +127,10 @@ c.irregular_intervals = false;
 % first level is NaN because it is determined by the second,
 % and the second implies neutrality between outcomes when it
 % is centered at 0.
-c.mu_0mu = [NaN, -0.79, 11.23];
+c.mu_0mu = [NaN, -1.45, 7.79];
 c.mu_0sa = [NaN,  0, 0];
 
-c.logsa_0mu = [NaN,   2.76,    0.11];
+c.logsa_0mu = [NaN,   2.58,    0.09];
 c.logsa_0sa = [NaN,    0,      0];
 
 % Rhos
@@ -152,8 +152,8 @@ c.logkasa = [     0,      0];
 % Omegas
 % Format: row vector of length n_levels.
 % Undefined (therefore NaN) at the first level.
-c.ommu = [NaN,  -11.67  -6];
-c.omsa = [NaN, 4^2, 4^2];
+c.ommu = [NaN,  -8.10  -10.12];
+c.omsa = [NaN, 5^2, 5^2];
 
 % Gather prior settings in vectors
 c.priormus = [
@@ -184,5 +184,4 @@ c.prc_fun = @HGF_3levels;
 % Handle to function that transforms perceptual parameters to their native space
 % from the space they are estimated in
 c.transp_prc_fun = @HGF_3levels_transp;
-
 return;

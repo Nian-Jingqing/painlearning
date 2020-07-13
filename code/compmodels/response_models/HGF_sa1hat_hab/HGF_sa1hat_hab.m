@@ -29,10 +29,16 @@ y = r.y(:,1);
 y(r.irr) = [];
 
 u = r.u(:,1);
+
+nshocks = zeros(length(u), 1);
+for i = 1:length(u)
+    nshocks(i) = sum(u(1:i));
+end
+nshocks = (nshocks-min(nshocks))/(max(nshocks)-min(nshocks));
+
+nshocks(r.irr) = [];
 u(r.irr) = [];
 
-nshocks = r.u(:, end);
-nshocks(r.irr) = [];
 
 % Extract trajectories of interest from infStates
 mu1hat = infStates(:,1,1);

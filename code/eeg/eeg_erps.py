@@ -27,17 +27,21 @@ param = {
          # Additional LP filter for ERPs
          'erplpfilter': 30,
          # Filter to use
-         'filtertype': 'iir',
+         'filtertype': 'fir',
          # Length of baseline
          'erpbaseline': -0.2,
          'erpepochend': 1,
          # Threshold to reject trials
-         'erpreject': dict(eeg=300e-6),
+         'erpreject': dict(eeg=250e-6),
          # Threshold to reject shock trials
-         'erprejectshock': dict(eeg=500e-6),
+         'erprejectshock': dict(eeg=250e-6),
          # New sampling rate to downsample single trials
-         'resamp': 256
+         'resamp': 1024,
+         'excluded': ['sub-24', 'sub-31', 'sub-35', 'sub-51'],
+
          }
+
+part = [p for p in part if p not in param['excluded']]
 
 # ########################################################################
 # EPOCH AND SAVE ERPS
@@ -90,11 +94,7 @@ for p in part:
     raw.filter(
         None,
         param['erplpfilter'],
-        method=param['filtertype'],
-        filter_length='auto',
-        phase='zero',
-        fir_design='firwin',
-        pad="reflect_limited")
+        method=param['filtertype'])
 
     # Add empty column to make it easier to create the event array
     events['empty'] = 0
@@ -160,7 +160,7 @@ for p in part:
     for c in chans_to_plot:
         pick = erp_cues.ch_names.index(c)
         figs_chan.append(mne.viz.plot_compare_evokeds(evokeds, picks=pick,
-                                                      show=False))
+                                                      show=False)[0])
 
     report.add_slider_to_section(figs_chan, captions=chans_to_plot,
                                  section='ERPs for cues', title='Cues/chans')
@@ -218,7 +218,7 @@ for p in part:
     for c in chans_to_plot:
         pick = erp_shocks.ch_names.index(c)
         figs_chan.append(mne.viz.plot_compare_evokeds(evokeds, picks=pick,
-                                                      show=False))
+                                                      show=False)[0])
 
     report.add_slider_to_section(figs_chan, captions=chans_to_plot,
                                  section='ERPs for shocks',
@@ -254,7 +254,7 @@ for p in part:
 
     # Add bad trials to metadata
     strials_drop = erp_cues_single.copy()
-    strials_drop.drop_bad(reject=param['erprejectshock'])
+    strials_drop.drop_bad(reject=param['erpreject'])
     badtrials = [1 if len(li) > 0 else 0 for li in strials_drop.drop_log]
     erp_cues_single.metadata['badtrial'] = badtrials
 
@@ -291,7 +291,7 @@ for p in part:
 
     # Add bad trials to metadata
     strials_drop = erp_shocks_single.copy()
-    strials_drop.drop_bad(reject=param['erpreject'])
+    strials_drop.drop_bad(reject=param['erprejectshock'])
     badtrials = [1 if len(li) > 0 else 0 for li in strials_drop.drop_log]
     erp_shocks_single.metadata['badtrial'] = badtrials
 
@@ -354,7 +354,7 @@ def average_time_win_strials(strials, chans_to_average, amp_lat):
 
 
 # Make single trials for cues
-chans_to_average = [['Fz'], ['POz'], ['Cz'], ['CPz']]
+chans_to_average = [['Fz'], ['POz'], ['Cz'], ['CPz'], ['Pz'], ['Oz']]
 amp_lat = [[0.4, 0.8]]   # Latencies boundaries to average between in s
 all_meta = []
 for p in part:

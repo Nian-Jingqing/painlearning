@@ -36,13 +36,13 @@ param = {
          # Njobs for permutations
          'njobs': 20,
          # Alpha Threshold
-         'alpha': 0.01,
+         'alpha': 0.05,
          # Number of permutations
          'nperms': 5000,
          # Random state to get same permutations each time
          'random_state': 23,
          # Downsample to this frequency prior to analysis
-         'testresampfreq': 256,
+         'testresampfreq': 1024,
          # excluded participants
          'excluded': ['sub-24', 'sub-31', 'sub-35', 'sub-51'],
          # Use FDR (if false witll use TFCE)

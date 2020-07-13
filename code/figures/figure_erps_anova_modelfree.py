@@ -34,14 +34,14 @@ if not os.path.exists(outfigpath):
 
 param = {
          # Alpha Threshold
-         'alpha': 0.01,
+         'alpha': 0.05,
          # Font sizez in plot
          'titlefontsize': 24,
          'labelfontsize': 24,
          'ticksfontsize': 22,
          'legendfontsize': 20,
          # Downsample to this frequency prior to analysis
-         'testresampfreq': 256,
+         'testresampfreq': 1024,
          # Excluded parts
          'excluded': ['sub-24', 'sub-31', 'sub-35', 'sub-51']
          }

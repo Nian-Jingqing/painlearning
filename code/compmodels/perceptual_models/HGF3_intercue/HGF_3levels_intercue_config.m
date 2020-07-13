@@ -127,10 +127,10 @@ c.irregular_intervals = false;
 % first level is NaN because it is determined by the second,
 % and the second implies neutrality between outcomes when it
 % is centered at 0.
-c.mu_0mu = [NaN, -0.79, 9.6];
+c.mu_0mu = [NaN, -0.80, 4.11];
 c.mu_0sa = [NaN,  4, 0];
 
-c.logsa_0mu = [NaN,   2.69,    0.05];
+c.logsa_0mu = [NaN,   2.90,    0.41];
 c.logsa_0sa = [NaN,    0,      0];
 
 % Rhos
@@ -152,7 +152,7 @@ c.logkasa = [     0,      0];
 % Omegas
 % Format: row vector of length n_levels.
 % Undefined (therefore NaN) at the first level.
-c.ommu = [NaN,  -10,  -12];
+c.ommu = [NaN,  -4.56,  -10];
 c.omsa = [NaN, 5^2, 5^2];
 
 % Gather prior settings in vectors

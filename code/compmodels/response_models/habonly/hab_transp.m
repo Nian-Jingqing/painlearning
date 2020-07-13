@@ -1,4 +1,4 @@
-function [pvec, pstruct] = HGF_sa3hat_transp(r, ptrans)
+function [pvec, pstruct] = hab_transp(r, ptrans)
 % --------------------------------------------------------------------------------------------------
 % Copyright (C) 2016 Christoph Mathys, UZH & ETHZ
 %
@@ -14,6 +14,8 @@ pvec(1)     = ptrans(1);         % be0
 pstruct.be0 = pvec(1);
 pvec(2)     = ptrans(2);         % be1
 pstruct.be1 = pvec(2);
+% pvec(3)     = ptrans(3);         % be2
+% pstruct.be2 = pvec(3);
 % pvec(3)     = ptrans(3);         % be2
 % pstruct.be2 = pvec(3);
 % pvec(4)     = ptrans(4);         % be3

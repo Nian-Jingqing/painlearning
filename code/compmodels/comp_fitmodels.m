@@ -27,16 +27,14 @@ addpath(genpath(p.VBA_path));
 addpath(genpath(p.customfuncpath));
 
 % Name to give to comparison file
-p.comparison_name = 'comp_all_'
+p.comparison_name = 'comp_all_';
 
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Parameters
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Models to run using names below or 'all'
-p.to_run =  {'RW_nointercue', 'PH_nointercue', 'HGF2_nointercue',
-             'HGF3_nointercue', 'RW_intercue', 'PH_intercue',
-             'HGF2_intercue', 'HGF3_intercue'};
+p.to_run =  {'HGF2_intercue'};
 
 
 % Models to compare using VBA (if empty compares model that were ran)
@@ -71,6 +69,7 @@ m.use_bayesian_average = 0;  % Bayesian or regular average
 % Output
 m.makeplot = 1; % Create plots after fit
 m.makeindividualplot = 0; % Create plots for each subject
+
 
 
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -111,7 +110,7 @@ L_vba = [];
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 models = {}; % Init empty cell
 m.simulate = 0;
-
+m.usehab = 0;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Null models
@@ -249,13 +248,10 @@ m.resp_param = {'be0', 'be1'};
 m.simulate = 0;
 models{end+1} = m;
 
-
-
 m.name = 'HGF2_intercue_hab';
 m.prc_model = 'HGF_2levels_intercue_config';
 m.resp_model = 'HGF_sa1hat_hab_config';
-m.usehab = 1;
-m.resp_param = {'be0', 'be1', 'be2'};
+m.resp_param = {'be0', 'be1'};
 m.simulate = 0;
 models{end+1} = m;
 
@@ -298,7 +294,7 @@ models{end+1} = m;
 
 m.name = 'HGF3_nointercue';
 m.prc_model = 'HGF_3levels_config';
-m.resp_model = 'HGF_sa1hat';
+m.resp_model = 'HGF_sa1hat_config';
 m.resp_param = {'be0', 'be1'};
 m.simulate = 0;
 models{end+1} = m;
@@ -329,7 +325,6 @@ models{end+1} = m;
 % Run/Compare selected models
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Run
-
 if sum(strcmp(p.to_run, 'all')) || sum(strcmp(p.to_compare, 'all'))
     names = {};
     for mod = 1:length(models) % Loop all models
@@ -346,6 +341,7 @@ for mod = 1:length(models) % Loop all models
         end
     end
 end
+
 % Compare
 if size(L_vba, 2) > 1
     if sum(strcmp(p.to_run, 'all'))
@@ -403,15 +399,6 @@ for s = 1:length(m.data)
     end
 
     % Add number of shocks received to each trial
-    if m.usehab
-        nshocks = zeros(length(u(:,1)), 1);
-        for i = 1:length(u(:,1))
-            nshocks(i) = sum(u(1:i));
-        end
-        % standardize 0-1
-        u = [u, nshocks];
-    end
-
 
     if ~m.uselpp
         y = m.data{s}.response';

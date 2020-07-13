@@ -45,7 +45,9 @@ param = {
          # Excluded parts
          'excluded': ['sub-24', 'sub-31', 'sub-35', 'sub-51'],
          # Color palette
-         'palette': ['#4C72B0', '#0d264f', '#55a868', '#c44e52']
+         'palette': ['#4C72B0', '#0d264f', '#55a868', '#c44e52'],
+         # range on colormaps
+         'pwrv': [-0.2, 0.2]
 
          }
 
@@ -73,6 +75,11 @@ for cond in conditions:
                                         'eeg',
                                         p + '_task-fearcond_' + cond
                                         + '_avg-tfr.h5'))[0])
+        data[cond][-1].apply_baseline(mode='logratio',
+                                      baseline=(-0.2, 0))
+
+        data[cond][-1].crop(tmin=0, tmax=1, fmin=4, fmax=30)
+
 
         pdat.append(np.float32(data[cond][-1].data))
 
@@ -85,8 +92,8 @@ anova_data = np.stack(anova_data)
 # # Take difference of interest for each part
 diff_data = np.empty((2,) + anova_data.shape[1:])
 for s in range(anova_data.shape[1]):
-    diff_data[0, s, ::] = (anova_data[0, s, :] - anova_data[1, s, :])/anova_data[0, s, :]*100
-    diff_data[1, s, ::] = (anova_data[2, s, :] - anova_data[3, s, :])/anova_data[1, s, :]*100
+    diff_data[0, s, ::] = (anova_data[0, s, :] - anova_data[1, s, :])
+    diff_data[1, s, ::] = (anova_data[2, s, :] - anova_data[3, s, :])
 
 diff_data = np.squeeze(diff_data)
 
@@ -142,15 +149,6 @@ def boxplot_freqs(foi, chan, time, gavg, data_all, ax, pal):
     return ax
 
 
-def topo_freqs(p_plotin, foi, chan, time, gavg, dcond, ax, pal, vmin=-6,
-               vmax=6):
-    # Colour palette for plotting
-    c = 'CS-1'
-
-
-    return ax
-
-
 # First line are the TF plots at cz
 for chan in ['Pz', 'POz', 'Cz', 'CPz', 'Fz']:
     fig = plt.figure(figsize=(18, 9))
@@ -177,8 +175,8 @@ for chan in ['Pz', 'POz', 'Cz', 'CPz', 'Fz']:
                     tmin=-0.5, tmax=1,
                     show=False,
                     cmap='viridis',
-                    # vmin=-0.15,
-                    # vmax=0.15,
+                    vmin=-0.3,
+                    vmax=0.3,
                     title='',
                     axes=axes[idx],
                     colorbar=False,
@@ -244,11 +242,11 @@ for chan in ['Pz', 'POz', 'Cz', 'CPz', 'Fz']:
                        label="cbar1")
     cbar1 = fig.colorbar(axes[0].images[0], cax=cax,
                          orientation='vertical', aspect=10)
-    cbar1.set_label('Power (log ratio)', rotation=-90,
+    cbar1.set_label('Power (log baseline ratio)', rotation=-90,
                     labelpad=16, fontdict={'fontsize': param['labelfontsize']})
     cbar1.ax.tick_params(labelsize=param['ticksfontsize'])
 
-    plt.savefig(opj(outfigpath, 'TF_plots_' + chan + '.svg'),
+    plt.savefig(opj(outfigpath, 'TF_plots_' + chan + '.png'),
                 bbox_inches='tight', dpi=600)
 
     # TOPO and bar plots
@@ -276,7 +274,7 @@ for chan in ['Pz', 'POz', 'Cz', 'CPz', 'Fz']:
     boxplot_freqs(foi, chan, time, gavg, data_all, axes[-1], param['palette'])
     axes[-1].set_xlabel('Condition',
                         fontdict={'fontsize': param['labelfontsize']})
-    axes[-1].set_ylabel('Power (log ratio)',
+    axes[-1].set_ylabel('Power (log baseline ratio)',
                         fontdict={'fontsize': param['labelfontsize']})
     axes[-1].tick_params(axis="both", labelsize=param['ticksfontsize'])
     # foi = [4, 6]
@@ -313,9 +311,9 @@ for chan in ['Pz', 'POz', 'Cz', 'CPz', 'Fz']:
                      pltdat.info,
                      show=False,
                      cmap='viridis',
-                     # vmin=-0.15,
-                     # vmax=0.15,
-                     mask=mask,
+                     vmin=param['pwrv'][0],
+                     vmax=param['pwrv'][1],
+                     mask=None,
                      axes=axes[idx],
                      contours=False)
 
@@ -331,16 +329,18 @@ for chan in ['Pz', 'POz', 'Cz', 'CPz', 'Fz']:
     cax = fig2.add_axes([0.18, 0.52, 0.1, 0.05], label="cbar1")
     cbar1 = fig2.colorbar(axes[0].images[0], cax=cax,
                           orientation='horizontal', aspect=20)
-    cbar1.set_label('Power (log ratio)', rotation=0,
-                    labelpad=10,
+    cbar1.set_label('Power (log baseline ratio)', rotation=0,
+                    labelpad=14,
                     fontdict={'fontsize': param['labelfontsize']-5})
     cbar1.ax.tick_params(labelsize=param['ticksfontsize'])
 
-    plt.savefig(opj(outfigpath, 'TF_topobar_' + chan + '.svg'),
+    plt.savefig(opj(outfigpath, 'TF_topobar_' + chan + '.png'),
                 bbox_inches='tight', dpi=600)
 
 
 pvals = np.load(opj(outpath, 'cuesdiff_tfr_ttest_pvals.npy'))
+tvals = np.load(opj(outpath, 'cuesdiff_tfr_ttest_tvals.npy'))
+
 # pvals = np.swapaxes(pvals, 0, 2)
 
 # Same thing but for difference
@@ -352,6 +352,7 @@ for chan in ['Pz', 'POz', 'Cz', 'CPz', 'Fz']:
 
     p_plot = data[cond][0].copy()
     p_plot.data = pvals
+
     p_plot.data = np.where(p_plot.data < param['alpha'], 1, 0)
 
     pow_plot = []
@@ -369,8 +370,8 @@ for chan in ['Pz', 'POz', 'Cz', 'CPz', 'Fz']:
                     tmin=-0.5, tmax=1,
                     show=False,
                     cmap='viridis',
-                    # vmin=-0.15,
-                    # vmax=0.15,
+                    vmin=param['pwrv'][0],
+                    vmax=param['pwrv'][1],
                     title='',
                     axes=axes[idx],
                     colorbar=False,
@@ -396,14 +397,13 @@ for chan in ['Pz', 'POz', 'Cz', 'CPz', 'Fz']:
 
     for idx, c in enumerate(conditions):
         axes[idx].set_title(c, fontdict={"fontsize": param['titlefontsize']})
-
     # Pvalue plot
     p_plot.plot(picks=[pick],
                 tmin=-0.2, tmax=1,
                 show=False,
                 cmap='Greys',
-                # vmin=0.1,
-                # vmax=1.1,
+                vmin=0,
+                vmax=1.1,
                 title='',
                 axes=axes[len(conditions)],
                 colorbar=False
@@ -429,16 +429,16 @@ for chan in ['Pz', 'POz', 'Cz', 'CPz', 'Fz']:
                        label="cbar1")
     cbar1 = fig.colorbar(axes[0].images[0], cax=cax,
                          orientation='vertical', aspect=10)
-    cbar1.set_label('Power (log ratio)', rotation=-90,
+    cbar1.set_label('Power (log baseline ratio)', rotation=-90,
                     labelpad=18, fontdict={'fontsize': param['labelfontsize']})
     cbar1.ax.tick_params(labelsize=param['ticksfontsize'])
 
-    plt.savefig(opj(outfigpath, 'TF_plots_diff_' + chan + '.svg'),
+    plt.savefig(opj(outfigpath, 'TF_plots_diff_' + chan + '.png'),
                 bbox_inches='tight', dpi=600)
 
     fig2, axes = plt.subplots(1, 3, figsize=(12, 4))
 
-    foi = [20, 21]
+    foi = [20, 25]
     time = [0.6, 1]
 
     fidx = np.arange(np.where(gavg['CS-1'].freqs == foi[0])[0],
@@ -449,8 +449,10 @@ for chan in ['Pz', 'POz', 'Cz', 'CPz', 'Fz']:
                      np.argmin(np.abs(times - time[1])))
     cidx = gavg['CS-1'].ch_names.index(chan)
     diff_data.shape
-    plt_dat = diff_data[:, :, cidx, fidx, tidx]
-    plt_dat = np.average(plt_dat, 2)
+    plt_dat = np.average(diff_data[:, :, :, :, tidx], 4)
+    plt_dat = np.average(plt_dat[:, :, :, fidx], 3)
+    plt_dat = plt_dat[:, :, cidx]
+
     plt_dat = pd.DataFrame(data=np.swapaxes(plt_dat, 1, 0),
                            columns=conditions)
     plt_dat = pd.melt(plt_dat, var_name='Condition', value_name='Power')
@@ -474,7 +476,7 @@ for chan in ['Pz', 'POz', 'Cz', 'CPz', 'Fz']:
                 medianprops={'zorder': 11, 'alpha': 0.5})
     axes[-1].set_xlabel('',
                         fontdict={'fontsize': param['labelfontsize']})
-    axes[-1].set_ylabel('Power (log ratio)',
+    axes[-1].set_ylabel('Power (log baseline ratio)',
                         fontdict={'fontsize': param['labelfontsize']})
     axes[-1].tick_params(axis="both", labelsize=param['ticksfontsize'])
 
@@ -486,13 +488,12 @@ for chan in ['Pz', 'POz', 'Cz', 'CPz', 'Fz']:
         times = gavg['CS-1'].times
         tidx = np.arange(np.argmin(np.abs(times - time[0])),
                          np.argmin(np.abs(times - time[1])))
-        plt_dat = dcond[:, :, fidx, tidx]
-        plt_dat.shape
-        plt_dat = np.average(plt_dat, 2)
+        plt_dat = np.average(dcond[:, :, :, tidx], 3)
+        plt_dat = np.average(plt_dat[:, :, fidx], 2)
 
         p_dat = pvals
-        p_dat = p_dat[:, fidx, tidx]
-        p_dat = np.average(p_dat, 1)
+        p_dat = np.average(p_dat[:, :, tidx], 2)
+        p_dat = np.average(p_dat[:, fidx], 1)
 
         mask = np.where(p_dat < param['alpha'], 1, 0)
 
@@ -500,8 +501,8 @@ for chan in ['Pz', 'POz', 'Cz', 'CPz', 'Fz']:
                      pltdat.info,
                      show=False,
                      cmap='viridis',
-                     # vmaxm=0.15,
-                     # vmin=-0.15,
+                     vmin=param['pwrv'][0],
+                     vmax=param['pwrv'][1],
                      mask=mask,
                      axes=axes[idx],
                      contours=False)
@@ -518,10 +519,10 @@ for chan in ['Pz', 'POz', 'Cz', 'CPz', 'Fz']:
     cax = fig2.add_axes([0.27, 0.40, 0.1, 0.05], label="cbar1")
     cbar1 = fig2.colorbar(axes[0].images[0], cax=cax,
                           orientation='horizontal', aspect=20)
-    cbar1.set_label('Power (log ratio)', rotation=0,
+    cbar1.set_label('Power (log baseline ratio)', rotation=0,
                     labelpad=10,
                     fontdict={'fontsize': param['labelfontsize']-5})
     cbar1.ax.tick_params(labelsize=param['ticksfontsize'])
 
-    plt.savefig(opj(outfigpath, 'TF_topobar_' + chan + '.svg'),
+    plt.savefig(opj(outfigpath, 'TF_topobar_' + chan + '.png'),
                 bbox_inches='tight', dpi=600)

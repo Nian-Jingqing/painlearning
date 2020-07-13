@@ -28,7 +28,7 @@ part = [p for p in part if p not in param['excluded']]
 
 # Winning model
 mod = 'HGF2_intercue'
-comp_data = pd.read_csv(opj('/data/derivatives', 'computational_models',
+comp_data = pd.read_csv(opj('/data/derivatives', 'compmodels',
                             mod, mod + '_data.csv'))
 
 comp_data['sub'] = ['sub-' + str(p) for p in comp_data['sub']]
@@ -95,3 +95,55 @@ for p in part:
 alldata = pd.concat(subdats)
 
 alldata.to_csv('/data/derivatives/task-fearcond_alldata.csv')
+
+import matplotlib.pyplot as plt
+import seaborn as sns
+ax = sns.distplot(np.asarray(alldata['ratings'][alldata['trial_type'] == 'CS+S']),
+             kde=False, hist=True)
+
+ax.set_xlabel('Pain rating', fontsize = 30)
+ax.set_ylabel('Frequency', fontsize = 30)
+ax.tick_params('both', labelsize = 15)
+plt.tight_layout()
+plt.savefig('/data/derivatives/figures/rating_dist.png', dpi=400)
+
+
+
+
+import matplotlib.pyplot as plt
+import seaborn as sns
+ax = sns.distplot(np.asarray(alldata['nfr_auc'][alldata['trial_type'] == 'CS+S']),
+             kde=False, hist=True)
+
+ax.set_xlabel('NFR amplitude', fontsize = 30)
+ax.set_ylabel('Frequency', fontsize = 30)
+ax.tick_params('both', labelsize = 15)
+plt.tight_layout()
+plt.savefig('/data/derivatives/figures/nfr_dist.png', dpi=400)
+
+
+
+import matplotlib.pyplot as plt
+import seaborn as sns
+fig, axes = plt.subplots(6, 6, figsize=(20, 20))
+axes = axes.flatten()
+for idx, p in enumerate(list(set(alldata['participant_id']))):
+    subdat = alldata[alldata.participant_id == p]
+    rat = np.asarray(subdat['ratings'][subdat['trial_type'] == 'CS+S']).astype(float)
+    trials = range(len(rat))
+    axes[idx].plot(trials, rat)
+    axes[idx].set_ylim((0,100))
+    axes[idx].set_ylabel('Pain rating')
+    axes[idx].set_xlabel('Trial')
+    axes[idx].set_title(p)
+
+fig.tight_layout()
+plt.savefig('/data/derivatives/figures/ratings_bypart.png', dpi=400)
+
+
+
+
+ax.set_xlabel('NFR amplitude', fontsize = 30)
+ax.set_ylabel('Frequency', fontsize = 30)
+ax.tick_params('both', labelsize = 15)
+plt.savefig('/data/derivatives/figures/nfr_dist.png', dpi=400)

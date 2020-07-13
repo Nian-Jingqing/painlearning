@@ -83,10 +83,6 @@ partvar = {"age": {"Description": "age in years nan if not reported)"},
                            "score on the observation scale of FFM"},
            "ffmq_total": {"Description":
                           "total score on FFM"},
-
-           "Authors": ["MP Coll", "Z Walden", "M Roy",
-                       "P Rainville", "PA Bourgoin"],
-           "EthicsApprovals": "CRIUGM ethics committee",
            }
 
 writetojson('participants.json', bidsout, partvar)

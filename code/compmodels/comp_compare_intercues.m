@@ -16,7 +16,7 @@ p.customfuncpath = ['/home/mp/gdrive/projects/'...
 p.datafile =  ['/media/mp/lxhdd/2020_painlearning/derivatives'...
                 '/task-fearcond_scr_glmresp_processed.mat'];
 % Ouput path
-m.path = '/media/mp/lxhdd/2020_painlearning/derivatives/compmodels/compare_intercue';
+m.path = '/media/mp/lxhdd/2020_painlearning/derivatives/compmodels';
 if ~exist(m.path, 'dir')
    mkdir(m.path)
 end
@@ -27,13 +27,11 @@ addpath(genpath(p.VBA_path));
 addpath(genpath(p.customfuncpath));
 
 % Name to give to comparison file
-p.comparison_name = 'compare_intercues_'
-
+p.comparison_name = 'compare_intercues';
 
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Parameters
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 
 % Models to run using names below or 'all'
 p.to_run =  {};
@@ -41,7 +39,7 @@ p.to_run =  {};
 
 % Models to compare using VBA (if empty compares model that were ran)
 % Use this to compare models without running any
-p.to_compare =  {'RW_intercue', 'PH_intercue',
+p.to_compare =  {'RW_intercue', 'PH_intercue',...
                  'HGF2_intercue', 'HGF3_intercue'};
 p.comp_families = {};
 
@@ -72,7 +70,6 @@ m.use_bayesian_average = 0;  % Bayesian or regular average
 % Output
 m.makeplot = 1; % Create plots after fit
 m.makeindividualplot = 0; % Create plots for each subject
-
 
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Prepare data
@@ -368,9 +365,9 @@ if ~isempty(p.to_compare)
         end
     end
     if sum(strcmp(p.to_compare, 'all'))
-        fearcond_compare_models(L_vba', m.path, names, p.comp_families)
+        fearcond_compare_models(L_vba', m.path, names, p.comp_families, p.comparison_name)
     else
-        fearcond_compare_models(L_vba', m.path, names, p.comp_families)
+        fearcond_compare_models(L_vba', m.path, names, p.comp_families, p.comparison_name)
     end
 end
 
@@ -1628,7 +1625,7 @@ end
 
 
 
-function fearcond_compare_models(L, path, modnames, families)
+function fearcond_compare_models(L, path, modnames, families, savename)
 
 % Plots parameters
 p.resolution = '-r400';  % Figure resolution
@@ -1641,9 +1638,9 @@ end
 [posterior,out] = VBA_groupBMC(L, options) ;
 
 
-print(fullfile(path, 'Model_comparison.png'),...
+print(fullfile(path, [savename '_Model_comparison.png']),...
     '-dpng', p.resolution)
-save(fullfile(path, [p.comparison_name 'VBA_model_comp']), 'posterior', 'out')
+save(fullfile(path, [savename '_VBA_model_comp']), 'posterior', 'out')
 close;
 figure;
 L_plot = L';
@@ -1659,7 +1656,7 @@ for i = 1:length(modnames)
     hold on
 end
 
-print(fullfile(path, 'Models_LMEs_box.png'),...
+print(fullfile(path, [savename '_Model_LMEs.png']),...
     '-dpng', p.resolution)
 
 close;

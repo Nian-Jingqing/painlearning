@@ -25,7 +25,7 @@ pd.options.mode.chained_assignment = None  # default='warn'
 # Outpath for analysis
 outpath = '/data/derivatives/statistics/tfr_modelbased_ols'
 # Outpath for figures
-outfigpath = '/data/derivatives/figures'
+outfigpath = '/data/derivatives/figures/tfr_modelbased_ols'
 
 if not os.path.exists(outpath):
     os.mkdir(outpath)
@@ -51,7 +51,7 @@ param = {
          'ticksfontsize': 22,
          'legendfontsize': 20,
          # Downsample to this frequency prior to analysis
-         'testresampfreq': 512,
+         'testresampfreq': 256,
          # Excluded parts
          'excluded': ['sub-24', 'sub-31', 'sub-35', 'sub-51'],
          # Color palette
@@ -78,6 +78,12 @@ tvals = np.load(opj(outpath, 'ols_2ndlevel_tfr_tvals.npy'))
 # Mock  info
 epo = read_tfrs(opj('/data/derivatives',  part[0], 'eeg',
                     part[0] + '_task-fearcond_epochs-tfr.h5'))[0]
+
+epo.apply_baseline(mode='logratio',
+                              baseline=(-0.2, 0))
+
+epo.crop(tmin=0, tmax=1, fmin=4, fmax=40)
+
 
 regvarsnames = ['Expectation', 'Irr. uncertainty', 'Est. uncertainty']
 
@@ -138,7 +144,7 @@ for idx, regvar in enumerate(regvarsnames):
         ax[0].set_xlabel('Time (s)', fontsize=param['labelfontsize'])
         ax[1].set_ylabel('')
 
-        ax[1].set_title('p < 0.05, corrected at ' + chan,
+        ax[1].set_title('FDR corrected at ' + chan,
                         fontsize=param['titlefontsize'])
         ax[0].tick_params(axis="both",
                           labelsize=param['ticksfontsize'])

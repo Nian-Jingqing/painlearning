@@ -21,9 +21,9 @@ part = ['sub-' + s for s in layout.get_subject()]
 pd.options.mode.chained_assignment = None  # default='warn'
 
 # Outpaths for analysis
-outpath = '/data/derivatives/statistics/erps_modelbased_ols'
+outpath = '/data/derivatives/statistics/erps_modelbased_ols_single'
 
-outfigpath = '/data/derivatives/figures/erps_modelbased_ols'
+outfigpath = '/data/derivatives/figures/erps_modelbased_ols_single'
 if not os.path.exists(outfigpath):
     os.mkdir(outfigpath)
 param = {

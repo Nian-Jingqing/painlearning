@@ -2,16 +2,23 @@
 # Model based regression on ERPs data
 # @MP Coll, 2020, michelpcoll@gmail.com
 # #########################################################################
-
 import mne
-from os.path import join as opj
 import pandas as pd
 import numpy as np
 import os
-from mne.decoding import Scaler
-import scipy
+from os.path import join as opj
 from bids import BIDSLayout
 from mne.stats import ttest_1samp_no_p
+# from mne.stats import spatio_temporal_cluster_1samp_test as perm1samp
+# from functools import partial
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LinearRegression, Ridge
+from sklearn.pipeline import make_pipeline
+from mne.decoding import Vectorizer
+from mne.time_frequency import read_tfrs
+import scipy
+from functools import partial
+
 
 ###############################
 # Parameters
@@ -47,7 +54,7 @@ outpath = '/data/derivatives/statistics'
 if not os.path.exists(outpath):
     os.mkdir(outpath)
 
-outpath = '/data/derivatives/statistics/erps_modelbased_ols'
+outpath = '/data/derivatives/statistics/erps_modelbased_ols_ridge'
 if not os.path.exists(outpath):
     os.mkdir(outpath)
 
@@ -88,29 +95,30 @@ for p in part:
         df = df.iloc[goodtrials]
 
         epo = epo[goodtrials[0]]
-        # Bin trials by value and plot GFP
-
+        epo.metadata = df
         # Standardize data before regression
         # EEG data
-        scale = Scaler(scalings='mean')  # Says mean but is z score, see docs
-        epo_z = mne.EpochsArray(scale.fit_transform(epo.get_data()),
-                                epo.info)
+        clf = make_pipeline(Vectorizer(),
+                            StandardScaler(),
+                            Ridge())
 
         # Standardize data
         for regvar in regvars:
             df[regvar + '_z'] = scipy.stats.zscore(df[regvar])
 
-        epo.metadata = df.assign(Intercept=1)  # Add an intercept for later
-
         no = [r + '_z' for r in regvars]
-        names = ["Intercept"] + no
-        res = mne.stats.linear_regression(epo_z, epo.metadata[names],
-                                          names=names)
+        # Fit regression
+        clf.fit(epo.get_data(), df[no])
 
         betasnp = []
         for idx, regvar in enumerate(no):
-            betas[idx].append(res[regvar].beta)
-            betasnp.append(res[regvar].beta.data)
+            out = np.reshape(clf['ridge'].coef_[idx],
+                             (epo.get_data().shape[1],
+                              epo.get_data().shape[2]))
+            out = scipy.stats.zscore(out)
+            betasnp.append(out)
+            betas[idx].append(mne.EvokedArray(out,
+                              info=epo.info))
 
         allbetasnp.append(np.stack(betasnp))
         all_epos.append(epo)
@@ -119,7 +127,7 @@ for p in part:
 allbetas = np.stack(allbetasnp)
 all_epos = mne.concatenate_epochs(all_epos)
 
-# Grand average
+#Grand average
 beta_gavg = []
 for idx, regvar in enumerate(no):
     beta_gavg.append(mne.grand_average(betas[idx]))

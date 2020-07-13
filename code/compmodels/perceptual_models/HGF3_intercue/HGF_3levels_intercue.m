@@ -460,5 +460,4 @@ infStates(:,:,1) = traj.muhat;
 infStates(:,:,2) = traj.sahat;
 infStates(:,:,3) = traj.mu;
 infStates(:,:,4) = traj.sa;
-
 return;

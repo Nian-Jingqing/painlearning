@@ -129,10 +129,10 @@ c.irregular_intervals = false;
 % first level is NaN because it is determined by the second,
 % and the second implies neutrality between outcomes when it
 % is centered at 0.
-c.mu_0mu = [NaN, -0.78 0];
+c.mu_0mu = [NaN, -0.72 0];
 c.mu_0sa = [NaN, 0, 0];
 
-c.logsa_0mu = [NaN,   2.62, 1];
+c.logsa_0mu = [NaN,   3.08, 1];
 c.logsa_0sa = [NaN,   0, 0];
 
 % Rhos
@@ -154,7 +154,7 @@ c.logkasa = [     0,      0];
 % Omegas
 % Format: row vector of length n_levels.
 % Undefined (therefore NaN) at the first level.
-c.ommu = [NaN,  -0.43,  -6];
+c.ommu = [NaN,  -0.44,  -6];
 c.omsa = [NaN, 5^2, 0];
 
 
@@ -177,7 +177,7 @@ c.priorsas = [
 
 % Check whether we have the right number of priors
 expectedLength = 3*c.n_levels+2*(c.n_levels-1)+1;
-if length([c.priormus, c.priorsas]) ~= 2*expectedLength;
+if length([c.priormus, c.priorsas]) ~= 2*expectedLength
     error('tapas:hgf:PriorDefNotMatchingLevels', 'Prior definition does not match number of levels.')
 end
 

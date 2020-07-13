@@ -21,9 +21,9 @@ part = ['sub-' + s for s in layout.get_subject()]
 pd.options.mode.chained_assignment = None  # default='warn'
 
 # Outpaths for analysis
-outpath = '/data/derivatives/statistics/erps_modelbased_ols'
+outpath = '/data/derivatives/statistics/erps_modelbased_ols_ridge'
 
-outfigpath = '/data/derivatives/figures/erps_modelbased_ols'
+outfigpath = '/data/derivatives/figures/erps_modelbased_ols_ridge'
 if not os.path.exists(outfigpath):
     os.mkdir(outfigpath)
 param = {
@@ -66,7 +66,7 @@ regvarsnames = ['Expectation', 'Irr. uncertainty', 'Est. uncertainty']
 
 # ## Plot
 # Plot descritive topo data
-plot_times = [0.3, 0.5, 0.7]
+plot_times = [0.3, 0.5, 0.7, 0.8]
 times_pos = [np.abs(beta_gavg[0].times - t).argmin() for t in plot_times]
 
 chan_to_plot = ['POz', 'Pz', 'Oz', 'CPz', 'Cz', 'Fz']
@@ -95,8 +95,8 @@ for ridx, regvar in enumerate(regvars):
                                               markersize=3),
                              cmap='viridis',
                              show=False,
-                             vmin=-0.15,
-                             vmax=0.15,
+                             vmin=-1,
+                             vmax=1,
                              axes=topo_axis[tidx],
                              sensors=True,
                              contours=0,)
@@ -110,7 +110,7 @@ for ridx, regvar in enumerate(regvars):
     cax = fig.add_axes([0.91, 0.75, 0.015, 0.15], label="cbar1")
     cbar1 = fig.colorbar(im, cax=cax,
                          orientation='vertical', aspect=10,
-                         ticks=[-0.15, 0, 0.15])
+                         ticks=[-1, 0, 1])
     cbar1.ax.tick_params(labelsize=param['ticksfontsize'] - 6)
     cbar1.set_label('Beta', rotation=-90,
                     labelpad=20, fontdict={'fontsize': param["labelfontsize"]-5})
@@ -216,7 +216,7 @@ for c in chan_to_plot:
                                mean - sem, mean + sem, alpha=0.3,
                                facecolor=clrs[0])
         # Make it nice
-        line_axis.set_ylim((-0.1, 0.3))
+        line_axis.set_ylim((-1, 2))
 
         line_axis.axhline(0, linestyle=':', color='k')
         line_axis.axvline(0, linestyle=':', color='k')
@@ -232,7 +232,7 @@ for c in chan_to_plot:
             if pvals[ridx][tidx2, pick] < param['alpha']:
                 line_axis.fill_between([t2,
                                         t2 + timestep],
-                                       -0.02, -0.005, alpha=0.3,
+                                       -0.2, -0.005, alpha=0.3,
                                        facecolor='red')
         fig.tight_layout()
         fig.savefig(opj(outfigpath,

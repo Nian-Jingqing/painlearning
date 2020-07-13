@@ -31,18 +31,17 @@ param = {
          'filtertype': 'iir',
          # Length of epochs
          'erpbaseline': -0.2,
-         'erpepochend': 0.95,
-         'tfrepochstart': -1.5,
-         'tfrepochend': 1.5,
+         'erpepochend': 0.1,
+         'tfrepochstart': -1,
+         'tfrepochend': 2,
          # Threshold to reject trials
-         'tfr_reject': dict(eeg=500e-6),
+         'tfr_reject': dict(eeg=250e-6),
          # TFR parameters
-         'ttfreqs': np.arange(4, 50, 1),
-         'freqmax': 50,
-         'n_cycles': np.arange(4, 50, 1)/2,
-         'tfr_baseline_time': (-0.2, 0),
-         'tfr_baseline_mode': 'zlogratio',
-         'testresampfreq': 256,
+         'ttfreqs': np.arange(2, 41, 1),
+         'n_cycles': np.arange(2, 41, 1)/2,
+         'tfr_baseline_time': (-0.5, 0),
+         'tfr_baseline_mode': 'logratio',
+         'testresampfreq': 512,
          # Njobs to run the TFR
          'njobs': 20
           }
@@ -95,6 +94,9 @@ for p in part:
     events['empty'] = 0
     events_c = events[events['trial_type'].notna()]
 
+    # Remove shocks
+    events_c = events_c[events_c['trial_type'] != 'CS+S']
+
     # # ________________________________________________________
     # # Epoch according to condition
     events_id = {
@@ -121,156 +123,150 @@ for p in part:
                          reject_tmin=param['erpbaseline'],
                          reject_tmax=param['erpepochend'])
 
+    goodtrials = [0 if len(li) > 0 else 1 for li in tf_cues.drop_log]
+
     tf_cues_strials = mne.Epochs(
                                  raw,
                                  events=events_cues,
                                  event_id=events_id,
                                  tmin=param['tfrepochstart'],
                                  baseline=None,
+                                 metadata=events_c,
                                  tmax=param['tfrepochend'],
                                  preload=True,
                                  verbose=False)
-
-    # TFR single trials
+    raw = None
+    # # TFR single trials
     strials = tfr_morlet(tf_cues_strials,
                          freqs=param['ttfreqs'],
                          n_cycles=param['n_cycles'],
                          return_itc=False,
+                         use_fft=True,
                          decim=int(1024/param["testresampfreq"]),
                          n_jobs=param['njobs'],
                          average=False)
-    # Apply baseline
-    strials.apply_baseline(mode=param['tfr_baseline_mode'],
-                           baseline=param['tfr_baseline_time'])
 
-    # Remove unused parts
-    strials.crop(tmin=param['erpbaseline'],
-                 tmax=param['erpepochend'])
-
+    # # Apply baseline
+    # strials.apply_baseline(mode=param['tfr_baseline_mode'],
+    #                        baseline=param['tfr_baseline_time'])
+    #
+    # # Remove unused parts
+    # strials.crop(tmin=param['erpbaseline'],
+    #              tmax=param['erpepochend'])
+    tf_cues_strials = None
     strials.save(opj(outdir,  p + '_task-fearcond_'
                      + 'epochs-tfr.h5'), overwrite=True)
 
-    # Time frequency transform for induced power
+    # Drop bad
+    strials_good = strials[np.where(np.asarray(goodtrials) == 1)[0]]
+    strials = None
     induced = dict()
     for cond in events_id.keys():
-        induced[cond] = tfr_morlet(tf_cues[cond],
-                                   freqs=param['ttfreqs'],
-                                   n_cycles=param['n_cycles'],
-                                   return_itc=False,
-                                   decim=int(1024/param["testresampfreq"]),
-                                   n_jobs=param['njobs'],
-                                   average=True)
 
-        induced[cond].apply_baseline(mode=param['tfr_baseline_mode'],
-                                     baseline=param['tfr_baseline_time'])
+        induced = strials_good[strials_good.metadata.trial_cond4
+                               == cond].average()
+        induced.save(opj(outdir,  p + '_task-fearcond_' + cond
+                         + '_avg-tfr.h5'), overwrite=True)
 
-        # Remove unused parts
-        induced[cond].crop(tmin=param['erpbaseline'],
-                           tmax=param['erpepochend'])
+        # chans_to_plot = ['Cz', 'Pz', 'CPz', 'Oz', 'Fz', 'FCz']
+        # figs_tfr = []
+        # for c in chans_to_plot:
+        #     pick = induced.ch_names.index(c)
+        #     figs_tfr.append(induced.plot(picks=[pick],
+        #                                  tmin=-0.2, tmax=1,
+        #                                  show=False,
+        #                                  ))
+        #
+        # report.add_slider_to_section(figs_tfr,
+        #                              captions=chans_to_plot,
+        #                              section='TFR',
+        #                              title='Zscored TFR')
 
-        induced[cond].save(opj(outdir,  p + '_task-fearcond_' + cond
-                               + '_avg-tfr.h5'), overwrite=True)
-
-    chans_to_plot = ['Cz', 'Pz', 'CPz', 'Oz', 'Fz', 'FCz']
-    for c in chans_to_plot:
-        pick = induced[cond].ch_names.index(c)
-        figs_tfr = []
-        for cond in events_id.keys():
-            figs_tfr.append(induced[cond].plot(picks=[pick],
-                                               tmin=-0.2, tmax=1,
-                                               show=False,
-                                               ))
-
-        report.add_slider_to_section(figs_tfr,
-                                     captions=list(events_id.keys()),
-                                     section='TFR_' + c,
-                                     title='Zscored TFR at ' + c)
-
-    # same thing for shocks
-    events_s = events[events.trigger_info == 'shock']
-    events_s['cue_num'] = 255
-    events_s['empty'] = 0
-    events_shocks = np.asarray(events_s[['sample', 'empty', 'cue_num']])
-    events_id = {
-                 'shock': 255,
-                 }
-
-    # Reject very bad trials
-    tf_shocks = mne.Epochs(
-                           raw,
-                           events=events_shocks,
-                           event_id=events_id,
-                           tmin=param['tfrepochstart'],
-                           baseline=None,
-                           tmax=param['tfrepochend'],
-                           preload=True,
-                           verbose=False,
-                           reject=param['tfr_reject'],
-                           reject_tmin=param['erpbaseline'],
-                           reject_tmax=param['erpepochend'])
-
-    inducedshock = tfr_morlet(tf_shocks,
-                              freqs=param['ttfreqs'],
-                              n_cycles=param['n_cycles'],
-                              return_itc=False,
-                              decim=int(1024/param["testresampfreq"]),
-                              n_jobs=param['njobs'],
-                              average=True)
-    inducedshock.apply_baseline(mode=param['tfr_baseline_mode'],
-                                baseline=param['tfr_baseline_time'])
-
-    # Remove unused parts
-    inducedshock.crop(tmin=param['erpbaseline'],
-                      tmax=param['erpepochend'])
-
-    inducedshock.save(opj(outdir,  p + '_task-fearcond_' + 'shock'
-                          + '_avg-tfr.h5'), overwrite=True)
-
-    chans_to_plot = ['Cz', 'Pz', 'CPz', 'Oz', 'Fz', 'FCz']
-    figs_tfr = []
-    for c in chans_to_plot:
-        pick = inducedshock.ch_names.index(c)
-        figs_tfr.append(inducedshock.plot(picks=[pick],
-                                          tmin=-0.2, tmax=1,
-                                          show=False))
-    report.add_slider_to_section(figs_tfr,
-                                 captions=chans_to_plot,
-                                 section='TFR_shock',
-                                 title='Zscored TFR shocks')
-
-    tf_shocks_strials = mne.Epochs(
-                                 raw,
-                                 events=events_shocks,
-                                 event_id=events_id,
-                                 tmin=param['tfrepochstart'],
-                                 baseline=None,
-                                 tmax=param['tfrepochend'],
-                                 preload=True,
-                                 verbose=False)
-
-    # TFR single trials
-    strials = tfr_morlet(tf_shocks_strials,
-                         freqs=param['ttfreqs'],
-                         n_cycles=param['n_cycles'],
-                         return_itc=False,
-                         decim=int(1024/param["testresampfreq"]),
-                         n_jobs=param['njobs'],
-                         average=False)
-
-    strials.apply_baseline(mode=param['tfr_baseline_mode'],
-                           baseline=param['tfr_baseline_time'])
-
-    strials.crop(tmin=param['erpbaseline'],
-                 tmax=param['erpepochend'])
-
-    strials.save(opj(outdir,  p + '_task-fearcond_'
-                     + 'shocks_epochs-tfr.h5'), overwrite=True)
-
-    # Save as npy for matlab
-    np.save(opj(outdir,  p + '_task-fearcond_'
-                + 'shocks_epochs-tfr.npy'), strials.data)
-
-    report.save(opj(outdir,  p + '_task-fearcond'
-                    + '_avg-tfr.html'),
-                open_browser=False, overwrite=True)
+    # # same thing for shocks
+    # events_s = events[events.trigger_info == 'shock']
+    # events_s['cue_num'] = 255
+    # events_s['empty'] = 0
+    # events_shocks = np.asarray(events_s[['sample', 'empty', 'cue_num']])
+    # events_id = {
+    #              'shock': 255,
+    #              }
+    #
+    # # Reject very bad trials
+    # tf_shocks = mne.Epochs(
+    #                        raw,
+    #                        events=events_shocks,
+    #                        event_id=events_id,
+    #                        tmin=param['tfrepochstart'],
+    #                        baseline=None,
+    #                        tmax=param['tfrepochend'],
+    #                        preload=True,
+    #                        verbose=False,
+    #                        reject=param['tfr_reject'],
+    #                        reject_tmin=param['erpbaseline'],
+    #                        reject_tmax=param['erpepochend'])
+    #
+    # inducedshock = tfr_morlet(tf_shocks,
+    #                           freqs=param['ttfreqs'],
+    #                           n_cycles=param['n_cycles'],
+    #                           return_itc=False,
+    #                           decim=int(1024/param["testresampfreq"]),
+    #                           n_jobs=param['njobs'],
+    #                           average=True)
+    # inducedshock.apply_baseline(mode=param['tfr_baseline_mode'],
+    #                             baseline=param['tfr_baseline_time'])
+    #
+    # # Remove unused parts
+    # inducedshock.crop(tmin=param['erpbaseline'],
+    #                   tmax=param['erpepochend'])
+    #
+    # inducedshock.save(opj(outdir,  p + '_task-fearcond_' + 'shock'
+    #                       + '_avg-tfr.h5'), overwrite=True)
+    #
+    # chans_to_plot = ['Cz', 'Pz', 'CPz', 'Oz', 'Fz', 'FCz']
+    # figs_tfr = []
+    # for c in chans_to_plot:
+    #     pick = inducedshock.ch_names.index(c)
+    #     figs_tfr.append(inducedshock.plot(picks=[pick],
+    #                                       tmin=-0.2, tmax=1,
+    #                                       show=False))
+    # report.add_slider_to_section(figs_tfr,
+    #                              captions=chans_to_plot,
+    #                              section='TFR_shock',
+    #                              title='Zscored TFR shocks')
+    #
+    # tf_shocks_strials = mne.Epochs(
+    #                              raw,
+    #                              events=events_shocks,
+    #                              event_id=events_id,
+    #                              tmin=param['tfrepochstart'],
+    #                              baseline=None,
+    #                              tmax=param['tfrepochend'],
+    #                              preload=True,
+    #                              verbose=False)
+    #
+    # # TFR single trials
+    # strials = tfr_morlet(tf_shocks_strials,
+    #                      freqs=param['ttfreqs'],
+    #                      n_cycles=param['n_cycles'],
+    #                      return_itc=False,
+    #                      decim=int(1024/param["testresampfreq"]),
+    #                      n_jobs=param['njobs'],
+    #                      average=False)
+    #
+    # strials.apply_baseline(mode=param['tfr_baseline_mode'],
+    #                        baseline=param['tfr_baseline_time'])
+    #
+    # strials.crop(tmin=param['erpbaseline'],
+    #              tmax=param['erpepochend'])
+    #
+    # strials.save(opj(outdir,  p + '_task-fearcond_'
+    #                  + 'shocks_epochs-tfr.h5'), overwrite=True)
+    #
+    # # Save as npy for matlab
+    # np.save(opj(outdir,  p + '_task-fearcond_'
+    #             + 'shocks_epochs-tfr.npy'), strials.data)
+    #
+    # report.save(opj(outdir,  p + '_task-fearcond'
+    #                 + '_avg-tfr.html'),
+    #             open_browser=False, overwrite=True)
     plt.close('all')

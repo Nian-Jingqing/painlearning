@@ -30,7 +30,7 @@ part = ['sub-' + s for s in layout.get_subject()]
 pd.options.mode.chained_assignment = None  # default='warn'
 
 # Outpath for analysis
-outpath = '/data/derivatives/statistics'
+outpath = '/data/derivatives/statistics/tfr_modelbased_ols'
 if not os.path.exists(outpath):
     os.mkdir(outpath)
 
@@ -80,6 +80,12 @@ for p in part:
     epo = read_tfrs(opj('/data/derivatives',  p, 'eeg',
                         p + '_task-fearcond_epochs-tfr.h5'))[0]
 
+    epo.apply_baseline(mode='logratio',
+                                  baseline=(-0.2, 0))
+
+    epo.crop(tmin=0, tmax=1, fmin=4, fmax=40)
+
+
     # Drop bad trials and get indices
     goodtrials = np.where(df['badtrial'] == 0)
 
@@ -97,8 +103,6 @@ for p in part:
         clf = make_pipeline(Vectorizer(),
                             StandardScaler(),
                             LinearRegression(n_jobs=param['njobs']))
-
-        clf.fit(epo.data, df['sa1hat'])
 
         # Standardize data
         for regvar in regvars:

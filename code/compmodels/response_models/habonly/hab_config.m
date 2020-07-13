@@ -1,4 +1,4 @@
-function c = HGF_sa1hat_config_addvs
+function c = hab_config
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
 % Contains the configuration for the linear log-reaction time response model according to as
@@ -35,9 +35,9 @@ c.be0sa = 4;
 c.be1mu = 0;
 c.be1sa = 4;
 
-% % Beta_2
-% c.be2mu = 0;
-% c.be2sa = 4;
+% % % Beta_2
+% c.be2mu = 1;
+% c.be2sa = 6;
 
 % % Beta_3
 % c.be3mu = 0;
@@ -65,10 +65,10 @@ c.priorsas = [
          ];
 
 % Model filehandle
-c.obs_fun = @HGF_sa1hat_addvs;
+c.obs_fun = @hab;
 
 % Handle to function that transforms observation parameters to their native space
 % from the space they are estimated in
-c.transp_obs_fun = @HGF_sa1hat_transp_addvs;
+c.transp_obs_fun = @hab_transp;
 
 return;

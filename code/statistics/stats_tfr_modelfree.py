@@ -12,10 +12,10 @@ from bids import BIDSLayout
 from mne.stats import ttest_1samp_no_p
 from mne.time_frequency import read_tfrs
 import scipy
+from mne.stats import spatio_temporal_cluster_1samp_test as perm1samp
+
 # from mne.stats import spatio_temporal_cluster_1samp_test as perm1samp
-# from functools import partial
-
-
+# !pip install git+https://github.com/larsoner/mne-python@conn
 ###############################
 # Parameters
 ###############################
@@ -35,7 +35,6 @@ if not os.path.exists(outpath):
     os.mkdir(outpath)
 
 param = {
-
 
          # Njobs for permutations
          'njobs': 20,
@@ -71,6 +70,11 @@ for cond in conditions:
                                         p + '_task-fearcond_' + cond
                                         + '_avg-tfr.h5'))[0])
 
+        data[cond][-1].apply_baseline(mode='logratio',
+                                      baseline=(-0.2, 0))
+
+        data[cond][-1].crop(tmin=0, tmax=1)
+
         pdat.append(np.float32(data[cond][-1].data))
 
     anova_data.append(np.stack(pdat))
@@ -81,34 +85,28 @@ anova_data = np.stack(anova_data)
 
 # # Take difference of interest for each part
 diff_data = np.empty((1,) + anova_data.shape[1:])
+diff1 = np.empty((1,) + anova_data.shape[1:])
+diff2 = np.empty((1,) + anova_data.shape[1:])
 
 for s in range(anova_data.shape[1]):
-    diff_data[0, s, ::] = ((anova_data[0, s, :] - anova_data[1, s, :])
-                           - (anova_data[2, s, :] - anova_data[3, s, :]))
+    diff_data[0, s, :, :, :] = ((anova_data[0, s, :, :, :] - anova_data[1, s, :, :, :])
+                                - (anova_data[2, s, :, :, :] - anova_data[3, s, :, :, :]))
 
-diff_data.shape
+
 diff_data = np.squeeze(diff_data)
-
-# #########################################################################
-# ANOVA
-##########################################################################
-# Always output time x freq x chan
-
-
-#  TFCE
+diff1 = np.squeeze(diff1)
+diff2 = np.squeeze(diff2)
 #
-# chan_connect, _ = mne.channels.find_ch_connectivity(data['CS-1'][0].info,
-#                                                     'eeg')
-# # Create a 1 ajacent frequency connectivity
-# freq_connect = (np.eye(len(data['CS-1'][0].freqs))
-#                 + np.eye(len(data['CS-1'][0].freqs), k=1)
-#                 + np.eye(len(data['CS-1'][0].freqs), k=-1))
+# # #########################################################################
+# # ANOVA
+# ##########################################################################
+# # Always output time x freq x chan
 #
-# # Combine matrices to get a freq x chan connectivity matrix
-# connect = scipy.sparse.csr_matrix(np.kron(freq_connect,
-#                                           chan_connect.toarray())
-#                                   + np.kron(freq_connect,
-#                                             chan_connect.toarray()))
+# #  TFCE
+
+#
+#
+# from mne.stats import permutation_cluster_1samp_test
 #
 #
 # def stat_fun(*args):  # Custom ANOVA for permutation
@@ -145,7 +143,6 @@ diff_data = np.squeeze(diff_data)
 shapea = anova_data.shape
 anova_data_uni = np.reshape(anova_data, (shapea[0], shapea[1],
                                          shapea[2]*shapea[3]*shapea[4]))
-
 F_obs, pval = mne.stats.f_mway_rm(np.swapaxes(anova_data_uni, 1, 0),
                                   factor_levels=[4],
                                   effects='A',
@@ -171,45 +168,65 @@ np.save(opj(outpath, 'resamp_freqs.npy'), data['CS+'][0].freqs)
 shapet = diff_data.shape
 testdata = np.reshape(diff_data, (shapet[0], shapet[1]*shapet[2]*shapet[3]))
 
-tval = ttest_1samp_no_p(diff_data, sigma=1e-3)
+#
+tval = ttest_1samp_no_p(testdata, sigma=1e-3)
 pval = scipy.stats.t.sf(np.abs(tval), shapet[0]-1)*2  # two-sided pvalue
+#
 _, pval = mne.stats.fdr_correction(pval, alpha=param['alpha'])
+
 
 # ##############################################################
 # TFCE
-# from mne.stats import spatio_temporal_cluster_1samp_test as perm1samp
 # from functools import partial
 #
-# # T-test with hat correction
-# stat_fun_hat = partial(ttest_1samp_no_p, sigma=1e-3)
-#
-# testdata = diff_data.swapaxes(1, 3)
-# shapet = testdata.shape
-# testdata = np.reshape(diff_data, (shapet[0],
-#                                   shapet[1], shapet[2]*shapet[3]))
-#
-# # data is (n_observations, n_times, n_vertices)
-# tval, _, pval, _ = perm1samp(testdata,
-#                              n_jobs=param['njobs'],
-#                              threshold=dict(start=0, step=0.2),
-#                              connectivity=connect,
-#                              max_step=1,
-#                              n_permutations=param['nperms'],
-#                              buffer_size=None)
-
-# ##############################################################
+# T-test with hat correction
+testdata = np.swapaxes(diff_data, 1, 3)
+shapet = testdata.shape
 
 
-# Reshape in chan x freq x time
-pvals = np.reshape(pval, (shapet[1],
-                          shapet[2],
-                          shapet[3]))
+chan_connect, _ = mne.channels.find_ch_adjacency(data['CS-1'][0].info, 'eeg')
+
+
+connectivity = mne.stats.combine_adjacency(len(data['CS-1'][0].freqs),
+                                           chan_connect)
+
+# !pip install git+https://github.com/larsoner/mne-python@conn
+# data is (n_observations, n_times*n_vertices)
+testdata = np.reshape(testdata, (shapet[0], shapet[1], shapet[2]*shapet[3]))
+tval, clusters, pval, H0 = perm1samp(testdata,
+                                     n_jobs=param['njobs'],
+                                     threshold=dict(start=0, step=0.5),
+                                     connectivity=connectivity,
+                                     max_step=1,
+                                     check_disjoint=True,
+                                     n_permutations=2000,
+                                     buffer_size=None)
+
 tvals = np.reshape(tval, (shapet[1],
                           shapet[2],
                           shapet[3]))
+tvals = np.swapaxes(tvals, 0, 2)
 
+pvals = np.reshape(pval, (shapet[1],
+                          shapet[2],
+                          shapet[3]))
+pvals = np.swapaxes(pvals, 0, 2)
+
+dat = data[cond][-1].copy()
+dat.data = tvals
+dat.plot_topomap()
+print(np.max(np.abs(tvals)))
+
+dat = data[cond][-1].copy()
+dat.data = np.where(pvals < 0.05, 1, 0)
+dat.plot_topomap()
+dat.plot('POz')
+print(np.min(np.abs(pvals)))
+
+# ##############################################################
+# Reshape in chan x freq x time
 
 np.save(opj(outpath, 'cuesdiff_tfr_ttest_pvals.npy'), pvals)
-np.save(opj(outpath, 'cuesduff_tfr_ttest_tvals.npy'), tvals)
+np.save(opj(outpath, 'cuesdiff_tfr_ttest_tvals.npy'), tvals)
 np.save(opj(outpath, 'resamp_times.npy'), data['CS+'][0].times)
 np.save(opj(outpath, 'resamp_freqs.npy'), data['CS+'][0].freqs)

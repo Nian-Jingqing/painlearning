@@ -1,9 +1,9 @@
-# %% [markdown]
+
 
 # TEST
 # EEG preprocessing for Zoey's conditioning task
 # @MP Coll, 2018, michelpcoll@gmail.com
-# %%
+
 from mne.report import Report
 import pprint
 import mne
@@ -15,13 +15,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 from bids import BIDSLayout
 
-# %%
 ###############################
 # Parameters
 ##############################
 layout = BIDSLayout('/data/source')
 part = ['sub-' + s for s in layout.get_subject()]
-part = ['sub-23']
 param = {
          # EOG channels
          'eogchan': ['EXG3', 'EXG4', 'EXG5'],
@@ -37,7 +35,7 @@ param = {
          # Low pass filter cutoff
          'lpfilter': 100,
          # Filter to use
-         'filtertype': 'iir',
+         'filtertype': 'fir',
          # Plot for visual inspection (in Ipython, change pyplot to QT5)
          'visualinspect': False,
          # Reference
@@ -49,6 +47,8 @@ param = {
          'random_state': 23,
          # How many components keep in PCA
          'n_components': 40,
+         # Reject trials exceeding this amplitude before ICA
+         'erpreject': dict(eeg=500e-6),
          # Algorithm
          'icamethod': 'fastica',
          # Visually identified bad channels
@@ -67,77 +67,76 @@ param = {
                          '35': ['P9', 'Iz', 'C5', 'CP3', 'CP5', 'F8'],
                          '36': [],  # None
                          '37': [],  # None
-                         '38': [],  # None
+                         '38': ['P10'],  # None
                          '39': [],  # None
                          '40': [],  # None
-                         '41': [],  # None
+                         '41': ['TP7'],  # None
                          '42': ['CP2', 'P3'],
-                         '43': [],  # None
-                         '44': [],  # None
-                         '45': [],  # None
+                         '43': ['FC2'],  # None
+                         '44': ['FC2'],  # None
+                         '45': ['T7'],  # None
                          '46': [],  # None
-                         '47': [],  # None
+                         '47': ['T8'],  # None
                          '48': [],  # None
-                         '49': ['T7'],
+                         '49': ['P7', 'P10', 'P9', 'T7', 'CP5', 'TP7', 'TP8'],
                          '50': [],  # None
                          '51': [],  # None
-                         '52': [],  # None
+                         '52': ['P10'],  # None
                          '53': [],  # None
                          '54': [],  # None
                          '55': [],  # None
-                         '56': ['Iz', 'P10'],
+                         '56': ['P2', 'P10', 'AF7', 'Iz', 'P10'],
                          '57': ['Oz', 'O1']},
-         # Visually identified bad ICA (For PCA == 40)
-         'badica': {'23': [2, 8],
-                    '24': [0, 22],
-                    '25': [1, 9],
-                    '26': [0, 5, 15],
-                    '27': [0],
-                    '28': [0, 4],
-                    '29': [0, 14],
-                    '30': [0],
-                    '31': [0, 4, 10, 15, 32],
-                    '32': [2, 4, 7, 11, 17],
-                    '33': [7, 16],
-                    '34': [0, 2, 3, 6, 12, 15],
-                    '35': [4, 5, 8],
-                    '36': [0, 2, 30],
-                    '37': [1, 6],
-                    '38': [7, 14],
-                    '39': [0, 8],
-                    '40': [0, 3, 9, 10],
-                    '41': [3, 4, 8, 25],
-                    '42': [0, 15, 23, 26, 37],
-                    '43': [3, 14, 16],
-                    '44': [0, 18],
-                    '45': [6, 20],
-                    '46': [0, 4, 14, 16],
-                    '47': [9],
-                    '48': [4, 7, 8, 19],
-                    '49': [20, 26],
-                    '50': [0, 6],
-                    '51': [0, 5],
-                    '52': [4, 14],
-                    '53': [5, 12],
-                    '54': [3, 10, 14, 23],
-                    '55': [3, 7, 23],
-                    '56': [9, 11, 16, 19],
-                    '57': [6, 8, 23]}
+         # Visually identified bad ICAS
+         'badica': {'23': [0, 4],
+                    '24': [0, 2, 26],  # Excluded
+                    '25': [2],
+                    '26': [14],
+                    '27': [0, 1, 2, 3],
+                    '28': [0, 1, 2],
+                    '29': [0],
+                    '30': [0, 1],
+                    '31': [0, 1, 10],  # Excluded
+                    '32': [0, 3, 36, 65],
+                    '33': [0, 1, 2, 3, 4, 5],
+                    '34': [0, 33, 44],
+                    '35': [0, 1, 2],  # Excluded
+                    '36': [0, 10],
+                    '37': [0, 43],
+                    '38': [2],
+                    '39': [0],
+                    '40': [0, 14, 15, 16, 18, 21],
+                    '41': [3, 7, 12, 29],
+                    '42': [0, 2, 50, 54, 55],
+                    '43': [0],
+                    '44': [1],
+                    '45': [0, 4, 54],
+                    '46': [1, 15],
+                    '47': [0, 3, 22, 23],
+                    '48': [2, 8, 15],
+                    '49': [0, 1],
+                    '50': [0, 9],
+                    '51': [0, 3],  # Excluded
+                    '52': [0],
+                    '53': [0, 8],
+                    '54': [0, 46, 60],
+                    '55': [0, 2],
+                    '56': [0, 2],
+                    '57': [0, 8, 9]}
          }
 
 # Output dir
 outdir = opj('/data/derivatives')
 
-# %%
-# Choose participants to process
 
+# Choose participants to process
 for p in part:
 
     ###############################
     # Initialise
     ##############################
 
-    print('Processing participant'
+    print('Processing participant '
           + p)
 
     # _______________________________________________________
@@ -161,10 +160,11 @@ for p in part:
     # ______________________________________________________
     # Load EEG file
     f = layout.get(subject=p[-2:], extension='bdf', return_type='filename')[0]
-    raw = mne.io.read_raw_bdf(f, montage=None, verbose=False,
+    raw = mne.io.read_raw_bdf(f, verbose=False,
                               eog=param['eogchan'],
                               exclude=param['dropchan'],
                               preload=True)
+
 
     # Rename external channels
     raw.rename_channels(param['renamechan'])
@@ -199,22 +199,34 @@ for p in part:
     # ______________________________________________________
     # Load and apply montage
 
-    montage = mne.channels.read_montage(param['montage'],
-                                        ch_names=raw.ch_names)
-
-    raw.set_montage(montage)  # Apply positions
+    raw = raw.set_montage(param['montage'])
     raw.load_data()  # Load in RAM
+
+    # ________________________________________________________________________
+    # Remove bad channels
+    if param['visualinspect']:
+        raw.plot(
+            n_channels=raw.info['nchan'],
+            scalings=dict(eeg=0.00020),
+            block=True)
+
+    raw.info['bads'] = param['badchannels'][p[-2:]]
+
+    # Plot sensor positions and add to report
+    plt_sens = raw.plot_sensors(show_names=True, show=False)
+    report.add_figs_to_section(
+        plt_sens,
+        captions='Sensor positions (bad in red)',
+        section='Preprocessing')
 
     # _______________________________________________________________________
     # Bandpass filter
+    raw_ica = raw.copy()  # Create a copy  to use different filter for ICA
     raw.filter(
         param['hpfilter'],
-        param['lpfilter'],
+        None,
         method=param['filtertype'],
-        filter_length='auto',
-        phase='zero',
-        fir_design='firwin',
-        pad="reflect_limited")
+        verbose=True)
 
     # ______________________________________________________________________
     # Plot filtered spectrum
@@ -224,28 +236,9 @@ for p in part:
         plt_psdf, captions='Filtered spectrum', section='Preprocessing')
 
     # ________________________________________________________________________
-    # Remove and interpolate bad channels
-    if param['visualinspect']:
-        raw.plot(
-            n_channels=raw.info['nchan'],
-            scalings=dict(eeg=0.00020),
-            block=True)
-
-    raw.info['bads'] = param['badchannels'][p[-2:]]
-    if raw.info['bads']:
-        raw.interpolate_bads(reset_bads=True)
-
-    # Plot sensor positions and add to report
-    plt_sens = raw.plot_sensors(show_names=True, show=False)
-    report.add_figs_to_section(
-        plt_sens,
-        captions='Sensor positions (bad in red)',
-        section='Preprocessing')
-
-    # ________________________________________________________________________
     # Clean with ICA
 
-    # Make long epochs around trial onsets for ICA
+    # Make epochs around trial for ICA
 
     events['empty'] = 0
     events['triallabel'] = ['trial_' + str(i) for i in range(1, 469)]
@@ -256,45 +249,53 @@ for p in part:
     for idx, name in enumerate(list(events['triallabel'])):
         alltrialsid[name] = int(idx + 1)
 
+    # Low pass more agressively for ICA
+    raw_ica.filter(l_freq=1, h_freq=100)
     epochs_ICA = mne.Epochs(
-        raw,
+        raw_ica,
         events=events_array,
         event_id=alltrialsid,
-        tmin=-2,
+        tmin=-0.5,
         baseline=None,
-        tmax=2,
+        tmax=1,
         preload=True,
+        reject=param['erpreject'],
         verbose=False)
 
     print('Processing ICA for part ' + p + '. This may take some time.')
-    param
-    ica = ICA(n_components=param['n_components'],
+    ica = ICA(n_components=None,
               method=param['icamethod'],
               random_state=param['random_state'])
     ica.fit(epochs_ICA)
 
     # Add topo figures to report
-    plt_icacomp = ica.plot_components(show=False, res=32)
+    plt_icacomp = ica.plot_components(show=False, res=25)
     for l in range(len(plt_icacomp)):
         report.add_figs_to_section(
             plt_icacomp[l], captions='ICA', section='Artifacts')
 
-    # Identify which ICA correlate with eye blinks,
-    eog_averagev = create_eog_epochs(raw, ch_name='Fp1',
+    # Get manually identified bad ICA
+    icatoremove = param['badica'][p[-2:]]
+
+    # Identify which ICA correlate with eye blinks
+    chaneog = 'VEOGL'
+    eog_averagev = create_eog_epochs(raw_ica, ch_name=chaneog,
                                      verbose=False).average()
     # Find EOG ICA via correlation
     eog_epochsv = create_eog_epochs(
-        raw, ch_name='Fp1', verbose=False)  # get single EOG trials
+        raw_ica, ch_name=chaneog, verbose=False)  # get single EOG trials
     eog_indsv, scoresr = ica.find_bads_eog(
-        eog_epochsv, ch_name='Fp1', verbose=False)  # find correlation
+        eog_epochsv, ch_name=chaneog, verbose=False)  # find correlation
+
+    fig = ica.plot_scores(scoresr, exclude=eog_indsv, show=False)
+    report.add_figs_to_section(fig, captions='Correlation with EOG',
+                               section='Artifact')
 
     # Get ICA identified in visual inspection
-    icatoremove = param['badica'][p[-2:]]
-
-    # Plot removed ICA and add to report
     figs = list()
+    # Plot removed ICA and add to report
+    ica.exclude = icatoremove
     figs.append(ica.plot_sources(eog_averagev,
-                                 exclude=icatoremove,
                                  show=False,
                                  title='ICA removed on eog epochs'))
 
@@ -314,25 +315,28 @@ for p in part:
     # Loop all ICA and make diagnostic plots for report
     figs = list()
     capts = list()
-    for ical in range(len(ica._ica_names)):
-        f = ica.plot_properties(epochs_ICA,
-                                picks=ical,
-                                psd_args={'fmax': 35.},
-                                show=False)
 
-        figs.append(f[0])
+    f = ica.plot_properties(epochs_ICA,
+                            picks='all',
+                            psd_args={'fmax': 35.},
+                            show=False)
+
+    for ical in range(len(ica._ica_names)):
+
+        figs.append(f[ical])
         capts.append(ica._ica_names[ical])
 
+        ica.exclude = [ical]
         figs.append(ica.plot_sources(eog_averagev,
-                                     exclude=[ical],
                                      show=False))
         plt.close("all")
 
+    f = None
     report.add_slider_to_section(figs, captions=None,
                                  section='ICA-FULL')
 
     # Remove components manually identified
-    ica.exclude.extend(icatoremove)
+    ica.exclude = icatoremove
 
     # Apply ICA
     ica.apply(raw)
@@ -341,6 +345,8 @@ for p in part:
     # Re-reference data
     raw, _ = mne.set_eeg_reference(raw, param['ref'], projection=False)
 
+    if raw.info['bads']:
+        raw.interpolate_bads(reset_bads=True)
     # ______________________________________________________________________
     # Save cleaned data
     raw.save(opj(pdir, p + '_task-fearcond_cleanedeeg_raw.fif'),

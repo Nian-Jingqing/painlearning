@@ -47,7 +47,7 @@ outpath = '/data/derivatives/statistics'
 if not os.path.exists(outpath):
     os.mkdir(outpath)
 
-outpath = '/data/derivatives/statistics/erps_modelbased_ols'
+outpath = '/data/derivatives/statistics/erps_modelbased_ols_single'
 if not os.path.exists(outpath):
     os.mkdir(outpath)
 
@@ -68,7 +68,6 @@ all_epos = []
 allbetasnp = []
 betas = [[] for i in range(len(regvars))]
 for p in part:
-
     df = mod_data[mod_data['sub'] == p]
 
     # Load single epochs file (cotains one epoch/trial)
@@ -83,37 +82,33 @@ for p in part:
     goodtrials = np.where(df['badtrial'] == 0)
 
     # Get external data for this part
+    df = df.iloc[goodtrials]
 
-    if len(df) != 0:
-        df = df.iloc[goodtrials]
+    epo = epo[goodtrials[0]]
+    # Bin trials by value and plot GFP
 
-        epo = epo[goodtrials[0]]
-        # Bin trials by value and plot GFP
+    # Standardize data before regression
+    # EEG data
+    scale = Scaler(scalings='mean')  # Says mean but is z score, see docs
+    epo_z = mne.EpochsArray(scale.fit_transform(epo.get_data()),
+                            epo.info)
 
-        # Standardize data before regression
-        # EEG data
-        scale = Scaler(scalings='mean')  # Says mean but is z score, see docs
-        epo_z = mne.EpochsArray(scale.fit_transform(epo.get_data()),
-                                epo.info)
-
-        # Standardize data
-        for regvar in regvars:
-            df[regvar + '_z'] = scipy.stats.zscore(df[regvar])
+    # Standardize data
+    betasnp = []
+    for idx, regvar in enumerate(regvars):
+        df[regvar + '_z'] = scipy.stats.zscore(df[regvar])
 
         epo.metadata = df.assign(Intercept=1)  # Add an intercept for later
 
-        no = [r + '_z' for r in regvars]
-        names = ["Intercept"] + no
+        names = ["Intercept"] + [regvar + '_z']
         res = mne.stats.linear_regression(epo_z, epo.metadata[names],
                                           names=names)
 
-        betasnp = []
-        for idx, regvar in enumerate(no):
-            betas[idx].append(res[regvar].beta)
-            betasnp.append(res[regvar].beta.data)
+        betas[idx].append(res[regvar + '_z'].beta)
+        betasnp.append(res[regvar + '_z'].beta.data)
 
-        allbetasnp.append(np.stack(betasnp))
-        all_epos.append(epo)
+    allbetasnp.append(np.stack(betasnp))
+    all_epos.append(epo)
 
 # Stack all data
 allbetas = np.stack(allbetasnp)
@@ -121,7 +116,7 @@ all_epos = mne.concatenate_epochs(all_epos)
 
 # Grand average
 beta_gavg = []
-for idx, regvar in enumerate(no):
+for idx, regvar in enumerate(regvars):
     beta_gavg.append(mne.grand_average(betas[idx]))
 
 
@@ -155,7 +150,7 @@ for idx, regvar in enumerate(no):
 
 # ################################### FDR
 tvals, pvals, sig_clusts = [], [], []
-for idx, regvar in enumerate(no):
+for idx, regvar in enumerate(regvars):
     # Reshape sub x time x vertices
     testdata = np.swapaxes(allbetas[:, idx, :, :], 2, 1)
     shape = testdata.shape

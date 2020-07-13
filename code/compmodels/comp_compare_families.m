@@ -27,7 +27,7 @@ addpath(genpath(p.VBA_path));
 addpath(genpath(p.customfuncpath));
 
 % Name to give to comparison file
-p.comparison_name = 'compare_families_'
+p.comparison_name = 'compare_families';
 
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Parameters
@@ -39,8 +39,8 @@ p.to_run =  {};
 
 % Models to compare using VBA (if empty compares model that were ran)
 % Use this to compare models without running any
-p.to_compare =  {'RW_nointercue', 'PH_nointercue', 'HGF2_nointercue',
-                 'HGF3_nointercue', 'RW_intercue', 'PH_intercue',
+p.to_compare =  {'RW_nointercue', 'PH_nointercue', 'HGF2_nointercue',...
+                 'HGF3_nointercue', 'RW_intercue', 'PH_intercue',...
                  'HGF2_intercue', 'HGF3_intercue'};
 p.comp_families = {[1, 2, 3, 4], [5, 6, 7, 8]};
 
@@ -366,9 +366,9 @@ if ~isempty(p.to_compare)
         end
     end
     if sum(strcmp(p.to_compare, 'all'))
-        fearcond_compare_models(L_vba', m.path, names, p.comp_families)
+        fearcond_compare_models(L_vba', m.path, names, p.comp_families, p.comparison_name)
     else
-        fearcond_compare_models(L_vba', m.path, names, p.comp_families)
+        fearcond_compare_models(L_vba', m.path, names, p.comp_families, p.comparison_name)
     end
 end
 
@@ -1626,7 +1626,7 @@ end
 
 
 
-function fearcond_compare_models(L, path, modnames, families)
+function fearcond_compare_models(L, path, modnames, families, savename)
 
 % Plots parameters
 p.resolution = '-r400';  % Figure resolution
@@ -1639,9 +1639,9 @@ end
 [posterior,out] = VBA_groupBMC(L, options) ;
 
 
-print(fullfile(path, 'Model_comparison.png'),...
+print(fullfile(path, [savename '_Model_comparison.png']),...
     '-dpng', p.resolution)
-save(fullfile(path, [p.comparison_name 'VBA_model_comp']), 'posterior', 'out')
+save(fullfile(path, [savename '_VBA_model_comp']), 'posterior', 'out')
 close;
 figure;
 L_plot = L';
@@ -1657,7 +1657,7 @@ for i = 1:length(modnames)
     hold on
 end
 
-print(fullfile(path, 'Models_LMEs_box.png'),...
+print(fullfile(path, [savename '_Model_LMEs.png']),...
     '-dpng', p.resolution)
 
 close;

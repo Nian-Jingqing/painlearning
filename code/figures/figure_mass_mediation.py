@@ -11,7 +11,6 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-import scipy
 from scipy.io import loadmat
 from bids import BIDSLayout
 
@@ -42,7 +41,7 @@ param = {
          # Random state to get same permutations each time
          'random_state': 23,
          # Downsample to this frequency prior to analysis
-         'testresampfreq': 256,
+         'testresampfreq': 1024,
          # excluded participants
          'excluded': ['sub-24', 'sub-31', 'sub-35', 'sub-51'],
          # Use FDR (if false witll use TFCE)
@@ -70,24 +69,29 @@ epo = epo.resample(param['testresampfreq'])
 # Make a nice plot
 # Add ERP line plots
 
-meds = [[['sa1hat', 'rating', 'eegdat'],
-         ['Irr. uncertainty', 'Pain rating', 'EEG']],
-        [['sa1hat', 'nfrnorm', 'eegdat'], ['Irr. uncertainty', 'NFR', 'EEG']],
-        [['eegdat', 'rating', 'sa1hat'], ['EEG', 'Pain rating',
-                                          'Irr. uncertainty']],
-        [['eegdat', 'nfrnorm', 'sa1hat'], ['EEG', 'NFR', 'Irr. uncertainty']],
-        [['vhat', 'rating', 'eegdat'], ['Expectation', 'Pain rating', 'EEG']]]
+meds = {'sa1hat': 'Irr. uncertainty',
+        'sa2hat': 'Est. uncertainty',
+        'vhat': 'Expectation',
+        'rating': 'Pain rating',
+        'nfrnorm': 'NFR',
+        'eegdat': 'EEG'}
+
+files = os.listdir(outpath)
 
 # Use bootstraps or t-test against 0
-testbetas = False
-for med in meds:
+testbetas = True
+for file in files:
 
-    X, Y, M = med[0][0], med[0][1], med[0][2]
-    X_lab, Y_lab, M_lab = med[1][0], med[1][1], med[1][2]
     # Load mediation output
-    file = opj(outpath, 'MassMediation_X_' + X + '_Y_'
-               + Y + '_M_' + M + '_nboots0.mat')
-    medat = loadmat(file)
+    variables = np.asarray(file.split('/')[-1].split('_'))[[2, 4, 6]]
+    nboots = np.asarray(file.split('/')[-1].split('_')[-1].split('.')[-2].split('nboots'))[1]
+
+    X, Y, M = variables[0], variables[1], variables[2]
+    X_lab = meds[variables[0]]
+    Y_lab = meds[variables[1]]
+    M_lab = meds[variables[2]]
+
+    medat = loadmat(opj(outpath, file))
 
     # Path order is a, b, c', c, ab
     paths = ['a', 'b', "c'", "c", 'ab']
@@ -95,15 +99,15 @@ for med in meds:
                 M_lab + ' -> ' + Y_lab,
                 X_lab + ' -> ' + Y_lab,
                 X_lab + " -> " + Y_lab,
-                X_lab + " * " + Y_lab,
+                X_lab + " ->  " + M_lab + " ->  " + Y_lab,
                 ]
     allplots = []
 
-    for b in [0, 1, 4, 2]:  # Loop effects and skip c
+    for b in [0, 1, 4, 2, 3]:  # Loop effects and skip c
 
         # If no bootstrap t-test against 0 using subject data
         pval = np.asarray(medat['pvals'][:, :, b])
-        # pval = mne.stats.fdr_correction(pval, alpha=param['alpha'])[1]
+        pval = mne.stats.fdr_correction(pval, alpha=param['alpha'])[1]
         meanbetas = np.asarray(medat['betas'][:, :, b])
         sembetas = np.asarray(medat['betas_se'][:, :, b])
         fig = plt.figure(figsize=(12, 9))
@@ -185,9 +189,9 @@ for med in meds:
 
         # Add p values
         for tidx2, t2 in enumerate(epo.times*1000):
-            if pval[pick, tidx2] < 0.05:
+            if pval[pick, tidx2] < param['alpha']:
                 line_axis[0].fill_between([t2,
-                                           t2+(1000/param['testresampfreq'])],
+                                           t2+(1024/param['testresampfreq'])],
                                           -0.005, 0, alpha=0.3,
                                           facecolor='red')
 
@@ -195,8 +199,10 @@ for med in meds:
         plt.suptitle('Path ' + paths[b] + ' - ' + pathdesc[b],
                      fontsize=param['titlefontsize'], y=1.05)
         plt.savefig(opj(outfigpath,
-                        'ERP_mediation_results_nboots'
+                        'ERP_mediation_' + X_lab + '_' + Y_lab
+                        + '_' + M_lab + '_nboots' + str(nboots) + '_'
                         + str(chan_to_plot) + '_'
-                        + paths[b] + '.svg'),
+                        + paths[b] + '.png'),
                     bbox_inches='tight',
-                    pad_inches=0.02, dpi=600)
+                    pad_inches=0.02, dpi=400)
+        plt.close('all')

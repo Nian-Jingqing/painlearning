@@ -36,15 +36,15 @@ c.be1mu = 0;
 c.be1sa = 4;
 
 % Beta_2
-c.be2mu = 0; 
+c.be2mu = 0;
 c.be2sa = 4;
 
 % % Beta_3
-% c.be3mu = 0; 
+% c.be3mu = 0;
 % c.be3sa = 4;
 
 % % Beta_4
-% c.be4mu = 0; 
+% c.be4mu = 0;
 % c.be4sa = 4;
 
 % Zeta
