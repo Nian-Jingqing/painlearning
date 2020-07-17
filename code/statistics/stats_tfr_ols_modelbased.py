@@ -19,6 +19,7 @@ from mne.decoding import Vectorizer
 from mne.time_frequency import read_tfrs
 import scipy
 from functools import partial
+from mne.stats import spatio_temporal_cluster_1samp_test as clust_1s_ttest
 
 ###############################
 # Parameters
@@ -41,20 +42,18 @@ if not os.path.exists(outpath):
 param = {
 
 
-         # Njobs for permutations
-         'njobs': 20,
-         # Alpha Threshold
-         'alpha': 0.05,
-         # Number of permutations
-         'nperms': 5000,
-         # Random state to get same permutations each time
-         'random_state': 23,
-         # Downsample to this frequency prior to analysis
-         'testresampfreq': 128,
-         # excluded participants
-         'excluded': ['sub-24', 'sub-31', 'sub-35', 'sub-51'],
+    # Njobs for permutations
+    'njobs': 20,
+    # Alpha Threshold
+    'alpha': 0.05,
+    # Number of permutations
+    'nperms': 5000,
+    # Random state to get same permutations each time
+    'random_state': 23,
+    # excluded participants
+    'excluded': ['sub-24', 'sub-31', 'sub-35', 'sub-51'],
 
-         }
+}
 
 part = [p for p in part if p not in param['excluded']]
 
@@ -74,39 +73,39 @@ allbetasnp, all_epos = [], []
 
 for p in part:
 
+    # Get external data for this part
     df = mod_data[mod_data['sub'] == p]
+
+    # Drop shocked trials
+    df_noshock = df[df['cond'] != 'CS++']
 
     # Load single epochs file (cotains one epoch/trial)
     epo = read_tfrs(opj('/data/derivatives',  p, 'eeg',
                         p + '_task-fearcond_epochs-tfr.h5'))[0]
 
-    epo.apply_baseline(mode='logratio',
-                                  baseline=(-0.2, 0))
+    # drop bad trials
+    goodtrials = epo.metadata['goodtrials'] == 1
+    epo = epo[goodtrials == 1]
+    df = df_noshock.reset_index()[goodtrials == 1]
 
-    epo.crop(tmin=0, tmax=1, fmin=4, fmax=40)
+    # Baseline
+    epo = epo.apply_baseline(mode='logratio',
+                             baseline=(-0.2, 0))
 
+    # Don't test baseline to reduce computational demands
+    epo = epo.crop(tmin=0, tmax=1)
 
-    # Drop bad trials and get indices
-    goodtrials = np.where(df['badtrial'] == 0)
-
-    # Get external data for this part
-
+    # If not empty
     if len(df) != 0:
-        df = df.iloc[goodtrials]
 
-        epo = epo[goodtrials[0]]
-        # Bin trials by value and plot GFP
-
-        # Standardize data before regression
-        # EEG data
-        # Vectorize, Zscore,
+        # Vectorize, Zscore, Linear
         clf = make_pipeline(Vectorizer(),
                             StandardScaler(),
                             LinearRegression(n_jobs=param['njobs']))
 
         # Standardize data
         for regvar in regvars:
-            df[regvar + '_z'] = ((df[regvar]-np.average(df[regvar]))
+            df[regvar + '_z'] = ((df[regvar] - np.average(df[regvar]))
                                  / np.std(df[regvar]))
 
         no = [r + '_z' for r in regvars]
@@ -127,88 +126,94 @@ for p in part:
 allbetas = np.stack(allbetasnp)
 
 # Create MNE EpochsArray
-
 np.save(opj(outpath, 'ols_2ndlevel_allbetas.npy'), allbetas)
+np.save(opj(outpath, 'resamp_times.npy'), epo.times)
+np.save(opj(outpath, 'resamp_freqs.npy'), epo.freqs)
 
-# Grand average
 # #########################################################################
 # Perform second level test on betas
 ##########################################################################
-# Always output time x freq x chan
 
 allbetas = np.load(opj(outpath, 'ols_2ndlevel_allbetas.npy'))
 epo = read_tfrs(opj('/data/derivatives',  part[0], 'eeg',
                     part[0] + '_task-fearcond_epochs-tfr.h5'))[0]
 
-stat_fun_hat = partial(ttest_1samp_no_p, sigma=1e-3)
-chan_connect, _ = mne.channels.find_ch_connectivity(epo.info,
-                                                    'eeg')
-# Create a 1 ajacent frequency connectivity
-freq_connect = (np.eye(len(epo.freqs)) + np.eye(len(epo.freqs), k=1)
-                + np.eye(len(epo.freqs), k=-1))
+# stat_fun_hat = partial(ttest_1samp_no_p, sigma=1e-3)
 
-# Combine matrices to get a freq x chan connectivity matrix
-connect = scipy.sparse.csr_matrix(np.kron(freq_connect,
-                                          chan_connect.toarray())
-                                  + np.kron(freq_connect,
-                                            chan_connect.toarray()))
+# Find connectivity structure
+chan_connect, _ = mne.channels.find_ch_adjacency(epo.info, 'eeg')
 
-tvals, pvals, sig_clusts = [], [], []
+# Cobine frequency and channel connectivityg
+connectivity = mne.stats.combine_adjacency(len(epo.freqs),
+                                           chan_connect)
+
+
+tvals, pvals = [], []
 for idx, regvar in enumerate(regvars):
 
-    # # # TFCE
-    # betas_tfce = allbetas[:, idx, ::]
-    # from mne.stats import spatio_temporal_cluster_1samp_test as clust_1s_ttest
-    # betas_tfce = np.reshape(betas_tfce, (betas_tfce.shape[0],
-    #                                      betas_tfce.shape[1]
-    #                                      * betas_tfce.shape[2],
-    #                                      betas_tfce.shape[3]))
-    # # Make channels first axis
-    # # TFCE dict
-    # tfce = dict(start=0, step=0.2)
-    # betas_tfce = np.swapaxes(betas_tfce, 1, 2)
-    # betas_tfce.shape
-    # tval, _, pval, _, = clust_1s_ttest(betas_tfce,
-    #                                    n_permutations=param['nperms'],
-    #                                    threshold=dict(start=0,
-    #                                                   step=0.2),
-    #                                    connectivity=connect,
-    #                                    stat_fun=stat_fun_hat,
-    #                                    max_step=1,
-    #                                    buffer_size=None,
-    #                                    n_jobs=param['njobs'],
-    #                                    seed=param['random_state'])
+    # Test each predictor
+    betas_tfce = allbetas[:, idx, ::]
+
+    # Swap time and channels to get time x freq x chan
+    betas_tfce = np.swapaxes(betas_tfce, 1, 3)
+    # Keep original shape
+    oshape = betas_tfce.shape
+
+    # Reshape in a sub x time x vertices frame
+    betas_tfce = np.reshape(betas_tfce, (betas_tfce.shape[0],
+                                         betas_tfce.shape[1],
+                                         betas_tfce.shape[2]*
+                                         betas_tfce.shape[3]))
+    # TFCE dict
+    tval, _, pval, _, = clust_1s_ttest(betas_tfce,
+                                       n_permutations=param['nperms'],
+                                       threshold=dict(start=0,
+                                                      step=0.2),
+                                       connectivity=connectivity,
+                                    #    stat_fun=stat_fun_hat,
+                                       max_step=1,
+                                       n_jobs=param['njobs'],
+                                       seed=param['random_state'])
 
     # Reshape back to data and append
-    # tvals.append(np.reshape(tval, (betas_tfce.shape[1],
-    #                                betas_tfce.shape[2],
-    #                                betas_tfce.shape[3])
-    #                         ))
-    # pvals.append(np.reshape(pval, (betas_tfce.shape[1],
-    #                                betas_tfce.shape[2],
-    #                                betas_tfce.shape[3])
-    #                         ))
+    tvals.append(np.reshape(tval, (oshape[1],
+                                   oshape[2],
+                                   oshape[3])
+                            ))
+    pvals.append(np.reshape(pval, (oshape[1],
+                                   oshape[2],
+                                   oshape[3])
+                            ))
+
+    # Reshape in chan x freq x time to fit with data
+    tvals[-1] = np.swapaxes(tvals[-1], 2, 0)
+    pvals[-1 ]= np.swapaxes(pvals[-1], 2, 0)
+
+    np.save(opj(outpath, 'ols_2ndlevel_tfr_pvals_' + regvar + '_.npy'),
+            pvals[-1])
+    np.save(opj(outpath, 'ols_2ndlevel_tfr_tvals_' + regvar + '_.npy'), tvals)
+
 
     # FDR
     # Reshape data in a single vector for t-test
 
-    # t-test
-    testdata = allbetas[:, idx, ::]
-    shapet = testdata.shape
-    testdata = testdata.reshape(shapet[0], shapet[1]*shapet[2]*shapet[3])
-    tval = ttest_1samp_no_p(testdata, sigma=1e-3)
-    pval = scipy.stats.t.sf(np.abs(tval), shapet[0]-1)*2  # two-sided pvalue
+    # # t-test
+    # testdata = allbetas[:, idx, ::]
+    # shapet = testdata.shape
+    # testdata = testdata.reshape(shapet[0], shapet[1] * shapet[2] * shapet[3])
+    # tval = ttest_1samp_no_p(testdata, sigma=1e-3)
+    # pval = scipy.stats.t.sf(
+    #     np.abs(tval), shapet[0] - 1) * 2  # two-sided pvalue
 
-    # FDR correction
-    _, pval = mne.stats.fdr_correction(pval, alpha=param['alpha'])
+    # # FDR correction
+    # _, pval = mne.stats.fdr_correction(pval, alpha=param['alpha'])
 
-    tvals.append(np.reshape(tval, shapet[1:]))
-    pvals.append(np.reshape(pval, shapet[1:]))
+    # tvals.append(np.reshape(tval, shapet[1:]))
+    # pvals.append(np.reshape(pval, shapet[1:]))
 
 tvals = np.stack(tvals)
 pvals = np.stack(pvals)
 
 np.save(opj(outpath, 'ols_2ndlevel_tfr_pvals.npy'), pvals)
 np.save(opj(outpath, 'ols_2ndlevel_tfr_tvals.npy'), tvals)
-np.save(opj(outpath, 'resamp_times.npy'), epo.times)
-np.save(opj(outpath, 'resamp_freqs.npy'), epo.freqs)
+

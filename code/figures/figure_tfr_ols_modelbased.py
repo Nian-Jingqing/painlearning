@@ -35,8 +35,6 @@ if not os.path.exists(outfigpath):
 param = {
          # Njobs for permutations
          'njobs': 15,
-         # New sampling rate to downsample single trials
-         'resamp': 250,
          # Alpha Threshold
          'alpha': 0.05,
          # Number of permutations
@@ -51,7 +49,7 @@ param = {
          'ticksfontsize': 22,
          'legendfontsize': 20,
          # Downsample to this frequency prior to analysis
-         'testresampfreq': 256,
+         'testresampfreq': 512,
          # Excluded parts
          'excluded': ['sub-24', 'sub-31', 'sub-35', 'sub-51'],
          # Color palette
@@ -82,7 +80,7 @@ epo = read_tfrs(opj('/data/derivatives',  part[0], 'eeg',
 epo.apply_baseline(mode='logratio',
                               baseline=(-0.2, 0))
 
-epo.crop(tmin=0, tmax=1, fmin=4, fmax=40)
+# epo.crop(tmin=0, tmax=1)
 
 
 regvarsnames = ['Expectation', 'Irr. uncertainty', 'Est. uncertainty']
@@ -94,9 +92,11 @@ regvarsnames = ['Expectation', 'Irr. uncertainty', 'Est. uncertainty']
 chans_to_plot = ['Pz', 'POz', 'CPz', 'Cz', 'Fz']
 for idx, regvar in enumerate(regvarsnames):
 
-    betas_plot = np.average(betas[:, idx, ...], axis=0)
+    # betas_plot = np.average(tvals[:, idx, ...], axis=0)
+    betas_plot = tvals[idx, ...]
+
     betas_plot.shape
-    betas_plot = zscore(betas_plot)
+    # betas_plot = zscore(betas_plot)
 
     pvals_plot = pvals[idx, ...]
     pvals_mask = np.where(pvals_plot < param['alpha'], 1, 0)
@@ -116,7 +116,7 @@ for idx, regvar in enumerate(regvarsnames):
     for chan in chans_to_plot:
 
         pick = epo.ch_names.index(chan)
-        fig, ax = plt.subplots(1, 2, figsize=(12, 4), sharey=True)
+        fig, ax = plt.subplots(1, 2, figsize=(12, 4), sharey=False)
 
         beta_gavg_plot.plot(picks=[pick],
                             tmin=-0.2, tmax=1,
@@ -134,7 +134,8 @@ for idx, regvar in enumerate(regvarsnames):
                         title='',
                         colorbar=False,
                         axes=ax[1],
-                        vmin=0.1
+                        vmin=0.1,
+                        vmax=1
                         )
         ax[0].set_title(regvar + ' - Betas at ' + chan,
                         fontsize=param['titlefontsize'])

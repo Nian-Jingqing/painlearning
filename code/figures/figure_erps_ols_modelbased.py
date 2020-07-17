@@ -1,3 +1,11 @@
+#-*- coding: utf-8  -*- 
+""" 
+Author: michel-pierre.coll
+Date: 2020-07-16 12:12:52
+Description: Produces figures for model-based OLS erps
+TODO:
+"""
+
 
 
 import mne
@@ -36,7 +44,7 @@ param = {
     'ticksfontsize': 22,
     'legendfontsize': 20,
     # Downsample to this frequency prior to analysis
-    'testresampfreq': 1024,
+    'testresampfreq': 256,
     # Excluded parts
     'excluded': ['sub-24', 'sub-31', 'sub-35', 'sub-51']
 }
@@ -66,10 +74,10 @@ regvarsnames = ['Expectation', 'Irr. uncertainty', 'Est. uncertainty']
 
 # ## Plot
 # Plot descritive topo data
-plot_times = [0.3, 0.5, 0.7]
+plot_times = [0.2, 0.4, 0.6]
 times_pos = [np.abs(beta_gavg[0].times - t).argmin() for t in plot_times]
 
-chan_to_plot = ['POz', 'Pz', 'Oz', 'CPz', 'Cz', 'Fz']
+chan_to_plot = ['POz', 'Pz']
 regvarsnamestopo = ['Expectation', 'Irr.\nuncertainty', 'Est.\nuncertainty']
 
 for ridx, regvar in enumerate(regvars):
@@ -87,7 +95,7 @@ for ridx, regvar in enumerate(regvars):
     for tidx, timepos in enumerate(times_pos):
         im, _ = plot_topomap(beta_gavg[ridx].data[:, timepos],
                              pos=beta_gavg[ridx].info,
-                             mask=pvals[ridx][timepos, :] < param['alpha'],
+                             mask=pvals[ridx][timepos, :] < param['alpha']/3,
                              mask_params=dict(marker='o',
                                               markerfacecolor='w',
                                               markeredgecolor='k',
@@ -229,7 +237,7 @@ for c in chan_to_plot:
         pvals[ridx][:, pick]
         timestep = 1024 / param['testresampfreq']
         for tidx2, t2 in enumerate(all_epos[0].times * 1000):
-            if pvals[ridx][tidx2, pick] < param['alpha']:
+            if pvals[ridx][tidx2, pick] < param['alpha']/3:
                 line_axis.fill_between([t2,
                                         t2 + timestep],
                                        -0.02, -0.005, alpha=0.3,

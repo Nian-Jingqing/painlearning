@@ -78,7 +78,7 @@ for cond in conditions:
         data[cond][-1].apply_baseline(mode='logratio',
                                       baseline=(-0.2, 0))
 
-        data[cond][-1].crop(tmin=0, tmax=1, fmin=4, fmax=30)
+        data[cond][-1].crop(tmin=0, tmax=1)
 
 
         pdat.append(np.float32(data[cond][-1].data))
@@ -108,7 +108,6 @@ p_plot.data = np.where(p_plot.data < param['alpha'], 1, 0)
 # ###########################################################################
 # Make plot
 ###############################################################################
-
 
 # Helper functions
 def boxplot_freqs(foi, chan, time, gavg, data_all, ax, pal):
@@ -148,195 +147,210 @@ def boxplot_freqs(foi, chan, time, gavg, data_all, ax, pal):
 
     return ax
 
+# _________________________________________________________________
+#  ANOVA plot (each condition)
 
-# First line are the TF plots at cz
-for chan in ['Pz', 'POz', 'Cz', 'CPz', 'Fz']:
-    fig = plt.figure(figsize=(18, 9))
+# # First line are the TF plots
+# for chan in ['Pz', 'POz', 'Cz', 'CPz', 'Fz']:
+#     fig = plt.figure(figsize=(12, 9))
 
-    axes = []
-    for i in [0, 2]:
-        for j in [0, 2]:
-            axes.append(plt.subplot2grid((4, 7),
-                                         (i, j),
-                                         colspan=2,
-                                         rowspan=2))
-    # Statistics
-    axes.append(plt.subplot2grid((4, 7),
-                                 (0, 5),
-                                 colspan=2,
-                                 rowspan=2))
+#     axes = []
+#     for i in [0, 2]:
+#         for j in [0, 2]:
+#             axes.append(plt.subplot2grid((4, 5),
+#                                          (i, j),
+#                                          colspan=2,
+#                                          rowspan=2))
+#     # # Statistics
+#     # axes.append(plt.subplot2grid((4, 5),
+#     #                              (0, 5),
+#     #                              colspan=2,
+#     #                              rowspan=2))
+#     for idx, c in enumerate(conditions):
+#         pltdat = gavg[c]
+#         pick = pltdat.ch_names.index(chan)
+#         ch_mask = np.asarray([1 if c == chan else 0 for c in pltdat.ch_names])
 
-    for idx, c in enumerate(conditions):
-        pltdat = gavg[c]
-        pick = pltdat.ch_names.index(chan)
-        ch_mask = np.asarray([1 if c == chan else 0 for c in pltdat.ch_names])
+#         pltdat.plot(picks=[pick],
+#                     tmin=-0.5, tmax=1,
+#                     show=False,
+#                     cmap='Greys',
+#                     vmin=-0.3,
+#                     vmax=0.3,
+#                     title='',
+#                     axes=axes[idx],
+#                     colorbar=False,
+#                     )
+#                 # # Pvalue plot
+#         powsig = pltdat.copy().crop(tmin=0, tmax=1)
 
-        pltdat.plot(picks=[pick],
-                    tmin=-0.5, tmax=1,
-                    show=False,
-                    cmap='viridis',
-                    vmin=-0.3,
-                    vmax=0.3,
-                    title='',
-                    axes=axes[idx],
-                    colorbar=False,
-                    )
+#         powsig.data = np.where(p_plot.data == 1, pltdat.data, np.nan)
+#         powsig.plot(picks=[pick],
+#                     tmin=-0.2, tmax=1,
+#                     show=False,
+#                     cmap='viridis',
+#                     vmin=-0.3,
+#                     vmax=0.3,
+#                     title='',
+#                     axes=axes[idx],
+#                     colorbar=False,
+#                     )
 
-        if idx < 2:
-            axes[idx].set_xlabel('',
-                                 fontdict={'fontsize': param['labelfontsize']})
-            axes[idx].set_xticks([])
-        else:
-            axes[idx].set_xlabel('Time (s)',
-                                 fontdict={'fontsize': param['labelfontsize']})
-            axes[idx].tick_params(axis="x",
-                                  labelsize=param['ticksfontsize'])
-        if idx == 0:
-            axes[idx].set_ylabel('',
-                                 fontdict={'fontsize': param['labelfontsize']})
-        else:
-            axes[idx].set_ylabel(None,
-                                 fontdict={'fontsize': param['labelfontsize']})
+#         if idx < 2:
+#             axes[idx].set_xlabel('',
+#                                  fontdict={'fontsize': param['labelfontsize']})
+#             axes[idx].set_xticks([])
+#         else:
+#             axes[idx].set_xlabel('Time (s)',
+#                                  fontdict={'fontsize': param['labelfontsize']})
+#             axes[idx].tick_params(axis="x",
+#                                   labelsize=param['ticksfontsize'])
+#         if idx == 0:
+#             axes[idx].set_ylabel('',
+#                                  fontdict={'fontsize': param['labelfontsize']})
+#         else:
+#             axes[idx].set_ylabel(None,
+#                                  fontdict={'fontsize': param['labelfontsize']})
 
-        if idx in [1, 3]:
-            axes[idx].set_yticks([])
-        else:
-            axes[idx].tick_params(axis="y", labelsize=param['ticksfontsize'])
+#         if idx in [1, 3]:
+#             axes[idx].set_yticks([])
+#         else:
+#             axes[idx].tick_params(axis="y", labelsize=param['ticksfontsize'])
 
-    for idx, c in enumerate(conditions):
-        axes[idx].set_title(c, fontdict={"fontsize": param['titlefontsize']})
+#     for idx, c in enumerate(conditions):
+#         axes[idx].set_title(c, fontdict={"fontsize": param['titlefontsize']})
 
-    # Pvalue plot
-    p_plot.plot(picks=[pick],
-                tmin=-0.2, tmax=1,
-                show=False,
-                cmap='Greys',
-                vmin=0.1,
-                vmax=1.1,
-                title='',
-                axes=axes[len(conditions)],
-                colorbar=False,
-                )
-    plt.tight_layout()
-    axes[-1].set_ylabel(None,
-                        fontdict={'fontsize': param['labelfontsize']})
-    axes[-1].set_xlabel('Time (s)',
-                        fontdict={'fontsize': param['labelfontsize']})
 
-    pos = axes[-1].get_position()
-    pos.y0 = pos.y0 - 0.23      # for example 0.2, choose your value
-    pos.y1 = pos.y1 - 0.23
-    pos.x0 = pos.x0 - 0.06     # for example 0.2, choose your value
-    pos.x1 = pos.x1 - 0.06
-    axes[-1].set_position(pos)
+#     # plt.tight_layout()
+#     # axes[-1].set_ylabel(None,
+#     #                     fontdict={'fontsize': param['labelfontsize']})
+#     # axes[-1].set_xlabel('Time (s)',
+#     #                     fontdict={'fontsize': param['labelfontsize']})
 
-    axes[-1].set_title("FDR corrected at " + chan,
-                       fontdict={"fontsize": param['titlefontsize']})
-    axes[-1].tick_params(axis="both", labelsize=param['ticksfontsize'])
+#     # pos = axes[-1].get_position()
+#     # pos.y0 = pos.y0 - 0.23      # for example 0.2, choose your value
+#     # pos.y1 = pos.y1 - 0.23
+#     # pos.x0 = pos.x0 - 0.06     # for example 0.2, choose your value
+#     # pos.x1 = pos.x1 - 0.06
+#     # axes[-1].set_position(pos)
 
-    fig.text(-0.01, 0.44, 'Frequency (Hz)',
-             fontdict={'fontsize': param['labelfontsize'],
-                       'fontweight': 'normal'}, rotation=90)
+#     # axes[-1].set_title("FDR corrected at " + chan,
+#     #                    fontdict={"fontsize": param['titlefontsize']})
+#     # axes[-1].tick_params(axis="both", labelsize=param['ticksfontsize'])
 
-    cax = fig.add_axes([0.58, 0.40, 0.01, 0.30],
-                       label="cbar1")
-    cbar1 = fig.colorbar(axes[0].images[0], cax=cax,
-                         orientation='vertical', aspect=10)
-    cbar1.set_label('Power (log baseline ratio)', rotation=-90,
-                    labelpad=16, fontdict={'fontsize': param['labelfontsize']})
-    cbar1.ax.tick_params(labelsize=param['ticksfontsize'])
+#     fig.text(-0.02, 0.44, 'Frequency (Hz)',
+#              fontdict={'fontsize': param['labelfontsize'],
+#                        'fontweight': 'normal'}, rotation=90)
 
-    plt.savefig(opj(outfigpath, 'TF_plots_' + chan + '.png'),
-                bbox_inches='tight', dpi=600)
+#     cax = fig.add_axes([0.86, 0.40, 0.01, 0.30],
+#                        label="cbar1")
+#     cax2 = fig.add_axes([0.82, 0.40, 0.01, 0.30],
+#                         label="cbar2")
+#     cbar1 = fig.colorbar(axes[0].images[2], cax=cax,
+#                         orientation='vertical', aspect=10)
+#     cbar2 = fig.colorbar(axes[0].images[0], cax=cax2,
+#                         orientation='vertical', aspect=10)
 
-    # TOPO and bar plots
-    plt.close('all')
-    fig2 = plt.figure(figsize=(12, 6))
+#     cbar1.set_label('Power (log baseline ratio)', rotation=-90,
+#                     labelpad=22, fontdict={'fontsize': param['labelfontsize']})
+#     cbar1.ax.tick_params(labelsize=param['ticksfontsize'])
 
-    axes = []
+#     plt.tight_layout()
 
-    for i in [0, 1]:
-        for j in [0, 1]:
-            axes.append(plt.subplot2grid((2, 4),
-                                         (i, j),
-                                         colspan=1,
-                                         rowspan=1))
+#     plt.savefig(opj(outfigpath, 'TF_plots_' + chan + '.png'),
+#                 bbox_inches='tight', dpi=600)
 
-    for j in [0]:
-        axes.append(plt.subplot2grid((2, 4),
-                                     (j, 2),
-                                     colspan=2,
-                                     rowspan=2))
+    # # TOPO and bar plots
+    # plt.close('all')
+    # fig2 = plt.figure(figsize=(12, 6))
 
-    foi = [20, 21]
-    time = [0.6, 1]
-    data_all = np.stack(anova_data)
-    boxplot_freqs(foi, chan, time, gavg, data_all, axes[-1], param['palette'])
-    axes[-1].set_xlabel('Condition',
-                        fontdict={'fontsize': param['labelfontsize']})
-    axes[-1].set_ylabel('Power (log baseline ratio)',
-                        fontdict={'fontsize': param['labelfontsize']})
-    axes[-1].tick_params(axis="both", labelsize=param['ticksfontsize'])
-    # foi = [4, 6]
-    # chan = 'Pz'
-    # time = [0.2, 1]
-    # boxplot_freqs(foi, chan, time, gavg, data_all, axes[-2], pal)
+    # axes = []
 
-    foi = [20, 21]
-    time = [0.6, 1]
+    # for i in [0, 1]:
+    #     for j in [0, 1]:
+    #         axes.append(plt.subplot2grid((2, 4),
+    #                                      (i, j),
+    #                                      colspan=1,
+    #                                      rowspan=1))
 
-    fidx = np.arange(np.where(gavg[c].freqs == foi[0])[0],
-                     np.where(gavg[c].freqs == foi[1])[0])
+    # for j in [0]:
+    #     axes.append(plt.subplot2grid((2, 4),
+    #                                  (j, 2),
+    #                                  colspan=2,
+    #                                  rowspan=2))
 
-    times = gavg[c].times
-    tidx = np.arange(np.argmin(np.abs(times - time[0])),
-                     np.argmin(np.abs(times - time[1])))
+    # foi = [20, 21]
+    # time = [0.6, 1]
+    # data_all = np.stack(anova_data)
+    # boxplot_freqs(foi, chan, time, gavg, data_all, axes[-1], param['palette'])
+    # axes[-1].set_xlabel('Condition',
+    #                     fontdict={'fontsize': param['labelfontsize']})
+    # axes[-1].set_ylabel('Power (log baseline ratio)',
+    #                     fontdict={'fontsize': param['labelfontsize']})
+    # axes[-1].tick_params(axis="both", labelsize=param['ticksfontsize'])
+    # # foi = [4, 6]
+    # # chan = 'Pz'
+    # # time = [0.2, 1]
+    # # boxplot_freqs(foi, chan, time, gavg, data_all, axes[-2], pal)
 
-    p_dat = p_plot.data
-    p_dat = p_dat[:, fidx, :]
-    p_dat = p_dat[:, :, tidx]
-    p_dat = np.average(p_dat, 2)
-    p_dat = np.average(p_dat, 1)
-    mask = np.where(p_dat > 0, 1, 0)
+    # foi = [20, 21]
+    # time = [0.6, 1]
 
-    for idx, c in enumerate(conditions):
+    # fidx = np.arange(np.where(gavg[c].freqs == foi[0])[0],
+    #                  np.where(gavg[c].freqs == foi[1])[0])
 
-        dcond = data_all[idx, :]
-        plt_dat = dcond[:, :, fidx, :]
-        plt_dat = plt_dat[:, :, :, tidx]
-        plt_dat = np.average(plt_dat, 3)
-        plt_dat = np.average(plt_dat, 2)
+    # times = gavg[c].times
+    # tidx = np.arange(np.argmin(np.abs(times - time[0])),
+    #                  np.argmin(np.abs(times - time[1])))
 
-        plot_topomap(np.average(plt_dat, 0),
-                     pltdat.info,
-                     show=False,
-                     cmap='viridis',
-                     vmin=param['pwrv'][0],
-                     vmax=param['pwrv'][1],
-                     mask=None,
-                     axes=axes[idx],
-                     contours=False)
+    # p_dat = p_plot.data
+    # p_dat = p_dat[:, fidx, :]
+    # p_dat = p_dat[:, :, tidx]
+    # p_dat = np.average(p_dat, 2)
+    # p_dat = np.average(p_dat, 1)
+    # mask = np.where(p_dat > 0, 1, 0)
 
-        axes[idx].set_title(c, fontdict={'fontsize': param['titlefontsize']})
-    # Get data of interest
+    # for idx, c in enumerate(conditions):
 
-    # Second line Significance at Fz, Cz, Pz
-    # Same with topo between sig freqs
-    # Bar plot 20-40 Hz; 500-600 ms
-    # Topo plot 20-40 Hz 500-600 ms
-    plt.tight_layout()
+    #     dcond = data_all[idx, :]
+    #     plt_dat = dcond[:, :, fidx, :]
+    #     plt_dat = plt_dat[:, :, :, tidx]
+    #     plt_dat = np.average(plt_dat, 3)
+    #     plt_dat = np.average(plt_dat, 2)
 
-    cax = fig2.add_axes([0.18, 0.52, 0.1, 0.05], label="cbar1")
-    cbar1 = fig2.colorbar(axes[0].images[0], cax=cax,
-                          orientation='horizontal', aspect=20)
-    cbar1.set_label('Power (log baseline ratio)', rotation=0,
-                    labelpad=14,
-                    fontdict={'fontsize': param['labelfontsize']-5})
-    cbar1.ax.tick_params(labelsize=param['ticksfontsize'])
+    #     plot_topomap(np.average(plt_dat, 0),
+    #                  pltdat.info,
+    #                  show=False,
+    #                  cmap='viridis',
+    #                  vmin=param['pwrv'][0],
+    #                  vmax=param['pwrv'][1],
+    #                  mask=None,
+    #                  axes=axes[idx],
+    #                  contours=False)
 
-    plt.savefig(opj(outfigpath, 'TF_topobar_' + chan + '.png'),
-                bbox_inches='tight', dpi=600)
+    #     axes[idx].set_title(c, fontdict={'fontsize': param['titlefontsize']})
+    # # Get data of interest
 
+    # # Second line Significance at Fz, Cz, Pz
+    # # Same with topo between sig freqs
+    # # Bar plot 20-40 Hz; 500-600 ms
+    # # Topo plot 20-40 Hz 500-600 ms
+    # plt.tight_layout()
+
+    # cax = fig2.add_axes([0.18, 0.52, 0.1, 0.05], label="cbar1")
+    # cbar1 = fig2.colorbar(axes[0].images[0], cax=cax,
+    #                       orientation='horizontal', aspect=20)
+    # cbar1.set_label('Power (log baseline ratio)', rotation=0,
+    #                 labelpad=14,
+    #                 fontdict={'fontsize': param['labelfontsize']-5})
+    # cbar1.ax.tick_params(labelsize=param['ticksfontsize'])
+
+    # plt.savefig(opj(outfigpath, 'TF_topobar_' + chan + '.png'),
+    #             bbox_inches='tight', dpi=600)
+
+
+# _________________________________________________________________
+# Differences plot
 
 pvals = np.load(opj(outpath, 'cuesdiff_tfr_ttest_pvals.npy'))
 tvals = np.load(opj(outpath, 'cuesdiff_tfr_ttest_tvals.npy'))
@@ -348,7 +362,7 @@ for chan in ['Pz', 'POz', 'Cz', 'CPz', 'Fz']:
 
     conditions = ['CS-1 vs CS-2', 'CS+ vs CS-E']
 
-    fig, axes = plt.subplots(1, 3, figsize=(12, 4))
+    fig, axes = plt.subplots(1, 2, figsize=(10, 4))
 
     p_plot = data[cond][0].copy()
     p_plot.data = pvals
@@ -369,7 +383,7 @@ for chan in ['Pz', 'POz', 'Cz', 'CPz', 'Fz']:
         pltdat.plot(picks=[pick],
                     tmin=-0.5, tmax=1,
                     show=False,
-                    cmap='viridis',
+                    cmap='Greys',
                     vmin=param['pwrv'][0],
                     vmax=param['pwrv'][1],
                     title='',
@@ -377,17 +391,32 @@ for chan in ['Pz', 'POz', 'Cz', 'CPz', 'Fz']:
                     colorbar=False,
                     )
 
+        powsig = pltdat.copy().crop(tmin=0, tmax=1)
+
+        powsig.data = np.where(p_plot.data == 1, pltdat.data, np.nan)
+        powsig.plot(picks=[pick],
+                    tmin=-0.2, tmax=1,
+                    show=False,
+                    cmap='viridis',
+                    vmin=-0.2,
+                    vmax=0.2,
+                    title='',
+                    axes=axes[idx],
+                    colorbar=False,
+                    )
+
         axes[idx].tick_params(axis="x", labelsize=param['ticksfontsize'])
+
+        axes[idx].set_xlabel('Time (s)',
+                                fontdict={'fontsize': param['labelfontsize']})
+
 
         if idx == 0:
             axes[idx].set_ylabel('Frequency (Hz)',
                                  fontdict={'fontsize': param['labelfontsize']})
-            axes[idx].set_xlabel(None,
-                                 fontdict={'fontsize': param['labelfontsize']})
+
         else:
             axes[idx].set_ylabel(None,
-                                 fontdict={'fontsize': param['labelfontsize']})
-            axes[idx].set_xlabel('Time (s)',
                                  fontdict={'fontsize': param['labelfontsize']})
 
         if idx in [1]:
@@ -398,48 +427,56 @@ for chan in ['Pz', 'POz', 'Cz', 'CPz', 'Fz']:
     for idx, c in enumerate(conditions):
         axes[idx].set_title(c, fontdict={"fontsize": param['titlefontsize']})
     # Pvalue plot
-    p_plot.plot(picks=[pick],
-                tmin=-0.2, tmax=1,
-                show=False,
-                cmap='Greys',
-                vmin=0,
-                vmax=1.1,
-                title='',
-                axes=axes[len(conditions)],
-                colorbar=False
-                )
-    plt.tight_layout()
-    axes[-1].set_ylabel(None,
-                        fontdict={'fontsize': param['labelfontsize']})
-    axes[-1].set_xlabel('Time (s)',
-                        fontdict={'fontsize': param['labelfontsize']})
 
-    pos = axes[-1].get_position()
-    pos.y0 = pos.y0
-    pos.y1 = pos.y1
-    pos.x0 = pos.x0 + 0.1
-    pos.x1 = pos.x1 + 0.1
-    axes[-1].set_position(pos)
 
-    axes[-1].set_title("FDR corrected at " + chan,
-                       fontdict={"fontsize": param['titlefontsize']})
-    axes[-1].tick_params(axis="both", labelsize=param['ticksfontsize'])
+    # axes[-1].set_ylabel(None,
+    #                     fontdict={'fontsize': param['labelfontsize']})
+    # axes[-1].set_xlabel('Time (s)',
+    #                     fontdict={'fontsize': param['labelfontsize']})
 
-    cax = fig.add_axes([0.68, 0.40, 0.01, 0.30],
+    # pos = axes[-1].get_position()
+    # pos.y0 = pos.y0
+    # pos.y1 = pos.y1
+    # pos.x0 = pos.x0 + 0.1
+    # pos.x1 = pos.x1 + 0.1
+    # axes[-1].set_position(pos)
+
+    # axes[-1].set_title("FDR corrected at " + chan,
+    #                    fontdict={"fontsize": param['titlefontsize']})
+    # axes[-1].tick_params(axis="both", labelsize=param['ticksfontsize'])
+
+#     cax2 = fig.add_axes([0.82, 0.40, 0.01, 0.30],
+#                         label="cbar2")
+#     cbar1 = fig.colorbar(axes[0].images[2], cax=cax,
+#                         orientation='vertical', aspect=10)
+#     cbar2 = fig.colorbar(axes[0].images[0], cax=cax2,
+#                         orientation='vertical', aspect=10)
+
+
+    cax = fig.add_axes([1.02, 0.40, 0.01, 0.30],
                        label="cbar1")
-    cbar1 = fig.colorbar(axes[0].images[0], cax=cax,
+    cax2 = fig.add_axes([1, 0.40, 0.01, 0.30],
+                        label="cbar2")
+    cbar2 = fig.colorbar(axes[0].images[0], cax=cax2,
                          orientation='vertical', aspect=10)
-    cbar1.set_label('Power (log baseline ratio)', rotation=-90,
-                    labelpad=18, fontdict={'fontsize': param['labelfontsize']})
+    cbar1 = fig.colorbar(axes[0].images[2], cax=cax,
+                        orientation='vertical', aspect=10)
+    cbar1.set_label('Power difference', rotation=-90,
+                    labelpad=20, fontdict={'fontsize': param['labelfontsize']})
     cbar1.ax.tick_params(labelsize=param['ticksfontsize'])
+    cbar2.ax.tick_params('both', size=0, labelsize=0)
+    cbar2.ax.set_xticklabels([])
+    plt.tight_layout()
 
     plt.savefig(opj(outfigpath, 'TF_plots_diff_' + chan + '.png'),
                 bbox_inches='tight', dpi=600)
 
-    fig2, axes = plt.subplots(1, 3, figsize=(12, 4))
+
+
+    fig2, axes = plt.subplots(1, 3, figsize=(10, 4))
 
     foi = [20, 25]
-    time = [0.6, 1]
+    time = [0.5, 0.9]
 
     fidx = np.arange(np.where(gavg['CS-1'].freqs == foi[0])[0],
                      np.where(gavg['CS-1'].freqs == foi[1])[0])
@@ -479,6 +516,7 @@ for chan in ['Pz', 'POz', 'Cz', 'CPz', 'Fz']:
     axes[-1].set_ylabel('Power (log baseline ratio)',
                         fontdict={'fontsize': param['labelfontsize']})
     axes[-1].tick_params(axis="both", labelsize=param['ticksfontsize'])
+    axes[-1].tick_params(axis="both", labelsize=param['ticksfontsize']-6)
 
     for idx, c in enumerate(conditions):
         dcond = diff_data[idx, :]
@@ -501,8 +539,8 @@ for chan in ['Pz', 'POz', 'Cz', 'CPz', 'Fz']:
                      pltdat.info,
                      show=False,
                      cmap='viridis',
-                     vmin=param['pwrv'][0],
-                     vmax=param['pwrv'][1],
+                     vmin=-0.2,
+                     vmax=0.2,
                      mask=mask,
                      axes=axes[idx],
                      contours=False)
@@ -516,13 +554,13 @@ for chan in ['Pz', 'POz', 'Cz', 'CPz', 'Fz']:
     # Topo plot 20-40 Hz 500-600 ms
     plt.tight_layout()
 
-    cax = fig2.add_axes([0.27, 0.40, 0.1, 0.05], label="cbar1")
+    cax = fig2.add_axes([0.28, 0.40, 0.08, 0.05], label="cbar1")
     cbar1 = fig2.colorbar(axes[0].images[0], cax=cax,
                           orientation='horizontal', aspect=20)
-    cbar1.set_label('Power (log baseline ratio)', rotation=0,
+    cbar1.set_label('Power \n difference', rotation=0,
                     labelpad=10,
                     fontdict={'fontsize': param['labelfontsize']-5})
-    cbar1.ax.tick_params(labelsize=param['ticksfontsize'])
+    cbar1.ax.tick_params(labelsize=param['ticksfontsize']-4)
 
     plt.savefig(opj(outfigpath, 'TF_topobar_' + chan + '.png'),
                 bbox_inches='tight', dpi=600)

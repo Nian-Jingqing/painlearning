@@ -293,6 +293,7 @@ for p in part:
 
     # Get ICA identified in visual inspection
     figs = list()
+
     # Plot removed ICA and add to report
     ica.exclude = icatoremove
     figs.append(ica.plot_sources(eog_averagev,
@@ -345,6 +346,7 @@ for p in part:
     # Re-reference data
     raw, _ = mne.set_eeg_reference(raw, param['ref'], projection=False)
 
+    # Interpolate channels
     if raw.info['bads']:
         raw.interpolate_bads(reset_bads=True)
     # ______________________________________________________________________

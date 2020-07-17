@@ -32,11 +32,10 @@ param = {
          'erpbaseline': -0.2,
          'erpepochend': 1,
          # Threshold to reject trials
-         'erpreject': dict(eeg=250e-6),
+         'erpreject': dict(eeg=500e-6),
          # Threshold to reject shock trials
-         'erprejectshock': dict(eeg=250e-6),
-         # New sampling rate to downsample single trials
-         'resamp': 1024,
+         'erprejectshock': dict(eeg=500e-6),
+
          'excluded': ['sub-24', 'sub-31', 'sub-35', 'sub-51'],
 
          }
@@ -45,7 +44,7 @@ part = [p for p in part if p not in param['excluded']]
 
 # ########################################################################
 # EPOCH AND SAVE ERPS
-##############################################################################
+##########################################################################
 
 # Initialise array to collect rejection stats
 reject_stats = pd.DataFrame(data={'part': part, 'perc_removed_cues': 9999,
@@ -259,8 +258,8 @@ for p in part:
     erp_cues_single.metadata['badtrial'] = badtrials
 
     # Save
-    if erp_cues_single.info['sfreq'] != param['resamp']:
-        erp_cues_single.resample(param['resamp'])
+    # if erp_cues_single.info['sfreq'] != param['resamp']:
+    #     erp_cues_single.resample(param['resamp'])
     erp_cues_single.save(opj(outdir, p
                              + '_task-fearcond_cues_singletrials-epo.fif'),
                          overwrite=True)
@@ -296,8 +295,8 @@ for p in part:
     erp_shocks_single.metadata['badtrial'] = badtrials
 
     # Save
-    if erp_shocks_single.info['sfreq'] != param['resamp']:
-        erp_shocks_single.resample(param['resamp'])
+    # if erp_shocks_single.info['sfreq'] != param['resamp']:
+        # erp_shocks_single.resample(param['resamp'])
     erp_shocks_single.save(opj(outdir, p
                                + '_task-fearcond_shock_singletrials-epo.fif'),
                            overwrite=True)
@@ -404,3 +403,4 @@ for p in part:
 
 all_meta = pd.concat(all_meta)
 all_meta.to_csv('/data/derivatives/task-fearcond_erpsmeta.csv')
+

@@ -362,7 +362,8 @@ for idx, var in enumerate(['om_2', 'be0', 'be1', 'ze']):
     else:
         ax[idx].set_ylabel('')
     ax[idx].set_xlabel('')
-    ax[idx].tick_params(labelsize=param['ticksfontsize']-4)
+    ax[idx].tick_params('y', labelsize=param['ticksfontsize']-4)
+    ax[idx].tick_params('x', labelsize=param['ticksfontsize'])
 
     fig.tight_layout()
     fig.savefig(opj(outfigpath, 'model_parameters.svg'), dpi=600)
