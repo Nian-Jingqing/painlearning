@@ -34,14 +34,14 @@ if not os.path.exists(outfigpath):
 
 param = {
          # Alpha Threshold
-         'alpha': 0.05,
+         'alpha': 0.05/3,
          # Font sizez in plot
          'titlefontsize': 24,
          'labelfontsize': 24,
          'ticksfontsize': 22,
          'legendfontsize': 20,
          # Downsample to this frequency prior to analysis
-         'testresampfreq': 1024,
+         'testresampfreq': 256,
          # Excluded parts
          'excluded': ['sub-24', 'sub-31', 'sub-35', 'sub-51']
          }
@@ -79,9 +79,9 @@ for cond in conditions:
 
 # Get difference for each part
 
-conditions_diff = {'CS+ vs CS-1': ['CS+', 'CS-1', 'csplusvscs1'],
-                   'CS+ vs CS-E': ['CS+', 'CS-E', 'csplusvscse'],
-                   'CS-E vs CS-2': ['CS-E', 'CS-2', 'csevscs2']}
+conditions_diff = {'Acquisition': ['CS+', 'CS-1', 'csplusvscs1'],
+                   'Extinction': ['CS+', 'CS-E', 'csplusvscse'],
+                   'Trace': ['CS-E', 'CS-2', 'csevscs2']}
 
 data_pairs = dict()
 gavg_pairs = dict()
@@ -114,14 +114,13 @@ for condd, vals in conditions_diff.items():
         plot_data = gavg_nomast.data[:, t] * 1000000  # to get microvolts
         im, _ = mne.viz.plot_topomap(plot_data,
                                      pos=mock_nomast.info,
-                                     mask=ppairs[condd][t, chankeep] < param['alpha']/3,
+                                     mask=ppairs[condd][t, chankeep] < param['alpha'],
                                     # cmap='viridis',
                                      show=False,
                                      vmin=-5,
                                      mask_params=dict(markersize=6),
                                      vmax=5,
                                      axes=ax,
-                                     ch_type='eeg',
                                      outlines='head',
                                      extrapolate='head',
                                      contours=0,
@@ -134,9 +133,9 @@ for condd, vals in conditions_diff.items():
 fig, ax = plt.subplots(figsize=(4, 0.5))
 cbar1 = fig.colorbar(im, cax=ax,
                      orientation='horizontal', aspect=5)
-cbar1.set_label('Amplitude (uV)\n at 600 ms', rotation=0,
+cbar1.set_label('Amplitude difference (uV)\n at 600 ms', rotation=0,
                 labelpad=20, fontdict={'fontsize': param["labelfontsize"]})
-cbar1.ax.tick_params(labelsize=18)
+cbar1.ax.tick_params(labelsize=param['ticksfontsize'])
 fig.savefig(opj(outfigpath, 'fig_topo_pairs_colorbar.svg'),
                     dpi=600)
 # 2 conditions
@@ -168,7 +167,7 @@ for chan in chan_to_plot:
         ymin = pys[cidx][0]
         ymax = pys[cidx][1]
         for tidx, t in enumerate(gavg[conditions[0]].times*1000):
-            if p_vals[tidx] < param['alpha']/3:
+            if p_vals[tidx] < param['alpha']:
                 line_axis.vlines(t, ymin=ymin,
                                 ymax=ymax,
                                 linestyle="-",
@@ -505,15 +504,17 @@ for col in lppcols:
                                y=dat_plot[col],
                                yerr=dat_plot_se[col], label=label,
                                marker=marker, color=color, ecolor=color,
-                               linestyle=linestyle, markersize=8, linewidth=2)
+                               linestyle=linestyle, markersize=8, linewidth=2,
+                               rasterized=True)
         else:
             line_axis.errorbar(x=[dat_plot.block[0]-off],
                                y=dat_plot[col],
                                yerr=dat_plot_se[col], label=label,
                                marker=marker, color=color, ecolor=color,
-                               linestyle=linestyle, markersize=8, linewidth=2)
+                               linestyle=linestyle, markersize=8, linewidth=2,
+                               rasterized=True)
     for line in [1.5, 2.5, 3.5, 4.5, 5.5, 6.5]:
-        line_axis.axvline(x=line, linestyle=':', color='k')
+        line_axis.axvline(x=line, linestyle=':', color='k', rasterized=True)
 
     line_axis.set_ylabel('Mean amplitude\n400-800 ms (Z scored)',
                          fontsize=param['labelfontsize'])

@@ -1,4 +1,9 @@
-
+#-*- coding: utf-8  -*-
+"""
+Author: michel-pierre.coll
+Date: 2020-07
+Description: Plot results of stats_erps_ols_modelbased.py
+"""
 
 import mne
 import pandas as pd
@@ -10,9 +15,12 @@ from mne.viz import plot_topomap
 import seaborn as sns
 import os
 import scipy.stats
+import pickle
 
-# ## Parameters
 
+###################################################################
+# Parameters
+###################################################################
 
 layout = BIDSLayout('/data/source')
 part = ['sub-' + s for s in layout.get_subject()]
@@ -36,7 +44,7 @@ param = {
     'ticksfontsize': 22,
     'legendfontsize': 20,
     # Downsample to this frequency prior to analysis
-    'testresampfreq': 1024,
+    'testresampfreq': 256,
     # Excluded parts
     'excluded': ['sub-24', 'sub-31', 'sub-35', 'sub-51']
 }
@@ -49,12 +57,14 @@ plt.rc("axes.spines", top=False, right=False)
 plt.rcParams['font.family'] = 'Arial Narrow'
 
 
-#  Load data from stats_erps_modelbasedregression.py
-
+###################################################################
+# Multivariate regression plot
+###################################################################
 
 tvals = np.load(opj(outpath, 'ols_2ndlevel_tvals.npy'))
 pvals = np.load(opj(outpath, 'ols_2ndlevel_pvals.npy'))
 all_epos = mne.read_epochs(opj(outpath, 'ols_2ndlevel_allepochs-epo.fif'))
+
 beta_gavg = np.load(opj(outpath, 'ols_2ndlevel_betasavg.npy'),
                     allow_pickle=True)
 allbetas = np.load(opj(outpath, 'ols_2ndlevel_betas.npy'),
@@ -66,10 +76,10 @@ regvarsnames = ['Expectation', 'Irr. uncertainty', 'Est. uncertainty']
 
 # ## Plot
 # Plot descritive topo data
-plot_times = [0.3, 0.5, 0.7]
+plot_times = [0.4, 0.6, 0.8]
 times_pos = [np.abs(beta_gavg[0].times - t).argmin() for t in plot_times]
 
-chan_to_plot = ['POz', 'Pz', 'Oz', 'CPz', 'Cz', 'Fz']
+chan_to_plot = ['POz']
 regvarsnamestopo = ['Expectation', 'Irr.\nuncertainty', 'Est.\nuncertainty']
 
 for ridx, regvar in enumerate(regvars):
@@ -84,17 +94,24 @@ for ridx, regvar in enumerate(regvars):
                                           colspan=2,
                                           rowspan=1))
 
+    beta_gavg_nomast = beta_gavg[ridx].copy().drop_channels(['M1', 'M2'])
+    chankeep =  [True if c not in ['M1', 'M2'] else False for c in
+                 beta_gavg[ridx].ch_names]
+
     for tidx, timepos in enumerate(times_pos):
-        im, _ = plot_topomap(beta_gavg[ridx].data[:, timepos],
-                             pos=beta_gavg[ridx].info,
-                             mask=pvals[ridx][timepos, :] < param['alpha'],
+        im, _ = plot_topomap(beta_gavg_nomast.data[:, timepos],
+                             pos=beta_gavg_nomast.info,
+                             mask=pvals[ridx][timepos, chankeep] < param['alpha'],
                              mask_params=dict(marker='o',
                                               markerfacecolor='w',
                                               markeredgecolor='k',
                                               linewidth=0,
-                                              markersize=3),
+                                              markersize=4),
                              cmap='viridis',
                              show=False,
+                             ch_type='eeg',
+                             outlines='head',
+                             extrapolate='head',
                              vmin=-0.15,
                              vmax=0.15,
                              axes=topo_axis[tidx],
@@ -102,10 +119,10 @@ for ridx, regvar in enumerate(regvars):
                              contours=0,)
         topo_axis[tidx].set_title(str(int(plot_times[tidx] * 1000)) + ' ms',
                                   fontdict={'size': param['labelfontsize']})
-        if tidx == 0:
-            topo_axis[tidx].set_ylabel(regvarname,
-                                       fontdict={'size':
-                                                 param['labelfontsize']})
+        # if tidx == 0:
+        #     topo_axis[tidx].set_ylabel(regvarname,
+        #                                fontdict={'size':
+        #                                          param['labelfontsize']})
 
     cax = fig.add_axes([0.91, 0.75, 0.015, 0.15], label="cbar1")
     cbar1 = fig.colorbar(im, cax=cax,
@@ -121,7 +138,7 @@ for ridx, regvar in enumerate(regvars):
 
 for c in chan_to_plot:
     for ridx, regvar in enumerate(regvars):
-        fig, line_axis = plt.subplots(1, 1, figsize=(5, 5))
+        fig, line_axis = plt.subplots(1, 1, figsize=(7, 7))
         regvarname = regvarsnames[ridx]
         all_epos.metadata.reset_index()
         nbins = 4
@@ -179,7 +196,7 @@ for c in chan_to_plot:
         line_axis.get_xaxis().tick_bottom()
         line_axis.get_yaxis().tick_left()
         line_axis.tick_params(labelsize=param['ticksfontsize'])
-        line_axis.set_title(regvarname, fontsize=param['titlefontsize'])
+        # line_axis.set_title(regvarname, fontsize=param['titlefontsize'])
         fig.tight_layout()
         fig.savefig(opj(outfigpath,
                         'fig_ols_erps_amp_bins_' + regvar + '_'
@@ -188,7 +205,7 @@ for c in chan_to_plot:
 
 for c in chan_to_plot:
     for ridx, regvar in enumerate(regvars):
-        fig, line_axis = plt.subplots(1, 1, figsize=(5, 5))
+        fig, line_axis = plt.subplots(1, 1, figsize=(7, 7))
 
         regvarname = regvarsnames[ridx]
         all_epos.metadata.reset_index()
@@ -205,6 +222,8 @@ for c in chan_to_plot:
         clrs = sns.color_palette("deep", 5)
 
         line_axis.set_ylabel('Beta (' + regvarname + ')',
+                             fontdict={'size': param['labelfontsize']})
+        line_axis.set_xlabel('Time (ms)',
                              fontdict={'size': param['labelfontsize']})
         # line_axis[0].tick_params(labelsize=12)
 
@@ -224,7 +243,7 @@ for c in chan_to_plot:
         line_axis.get_yaxis().tick_left()
         line_axis.tick_params(axis='both',
                               labelsize=param['ticksfontsize'])
-        line_axis.set_title(regvarname, fontsize=param['titlefontsize'])
+        # line_axis.set_title(regvarname, fontsize=param['titlefontsize'])
 
         pvals[ridx][:, pick]
         timestep = 1024 / param['testresampfreq']
@@ -239,3 +258,61 @@ for c in chan_to_plot:
                         'fig_ols_erps_betas_' + regvar + '_'
                         + c + '.svg'),
                     dpi=600, bbox_inches='tight')
+
+
+###################################################################
+# Plot model comparison
+###################################################################
+file = open(opj(outpath, 'erps_olsmean_VBAmodelcomp.pkl'), "rb")
+out = pickle.load(file)
+
+modnames = ['Expectation', 'Irr.\nuncertainty', 'Est.\nuncertainty']
+
+ep = out['ep'][0]
+ef = [out['Ef'][0][0]*100,
+      out['Ef'][1][0]*100,
+      out['Ef'][2][0]*100]
+
+fig, host = plt.subplots(figsize=(7, 7))
+
+par1 = host.twinx()
+color1 = '#004c6d'
+color2 = '#5886a5'
+
+x = np.arange(0.5, (len(ep))*0.75, 0.75)
+x2 = [c + 0.25 for c in x]
+p1 = host.bar(x, ep, width=0.25, color=color1, linewidth=1, edgecolor='k')
+p2 = par1.bar(x2, ef, width=0.25, color=color2, linewidth=1, edgecolor='k')
+
+host.set_ylim(0, 1)
+par1.set_ylim(0, 100)
+
+
+# host.set_xlabel("Distance")
+host.set_ylabel("Exceedance probability", fontsize=param["labelfontsize"])
+par1.set_ylabel("Model Frequency (%)",  fontsize=param["labelfontsize"])
+
+
+for ax in [par1]:
+    ax.set_frame_on(True)
+    ax.patch.set_visible(False)
+
+    plt.setp(ax.spines.values(), visible=False)
+    ax.spines["right"].set_visible(True)
+
+host.yaxis.label.set_color(color1)
+par1.yaxis.label.set_color(color2)
+
+host.spines["left"].set_edgecolor(color1)
+par1.spines["right"].set_edgecolor(color2)
+
+host.set_xticks([i+0.125 for i in x])
+host.set_xticklabels(modnames, size=param['ticksfontsize'])
+
+host.tick_params(axis='x', labelsize=param['labelfontsize'])
+
+host.tick_params(axis='y', colors=color1, labelsize=param['labelfontsize'])
+par1.tick_params(axis='y', colors=color2, labelsize=param['labelfontsize'])
+fig.tight_layout()
+
+fig.savefig(opj(outfigpath, 'erps_modelcomp.svg'), dpi=600)

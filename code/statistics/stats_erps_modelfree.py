@@ -87,26 +87,23 @@ anova_data = np.stack(anova_data)
 
 
 # # Take difference of interest for each part
-diff_data = np.empty((1,) + anova_data.shape[1:])
 csplusvscs1 = np.empty((1,) + anova_data.shape[1:])
 csevscs2 = np.empty((1,) + anova_data.shape[1:])
 csplusvscse = np.empty((1,) + anova_data.shape[1:])
+csplusvscse2 = np.empty((1,) + anova_data.shape[1:])
 
-diff_data.shape
+# Calculate differences
 for s in range(anova_data.shape[1]):
-    diff_data[0, s, ::] = ((anova_data[2, s, :] - anova_data[0, s, :])
-                           - (anova_data[3, s, :] - anova_data[3, s, :]))
 
     csplusvscs1[0, s, ::] = (anova_data[2, s, :] - anova_data[0, s, :])
     csevscs2[0, s, ::] = (anova_data[3, s, :] - anova_data[1, s, :])
-    csplusvscse[0, s, ::] = (anova_data[2, s, :] - anova_data[3, s, :])
+    csplusvscse[0, s, ::] = ((anova_data[2, s, :] - anova_data[3, s, :]) - (anova_data[0, s, :] - anova_data[1, s, :]))
 
-diff_data = np.squeeze(diff_data)
 csplusvscs1 = np.squeeze(csplusvscs1)
 csevscs2 = np.squeeze(csevscs2)
 csplusvscse = np.squeeze(csplusvscse)
 
-shape = diff_data.shape
+shape = csplusvscs1.shape
 
 # # # TFCE
 from mne.stats import spatio_temporal_cluster_1samp_test as perm1samp
@@ -164,86 +161,3 @@ tvals = np.reshape(tval, (shape[1],
 
 np.save(opj(outpath, 'csevscs2_ttest_pvals.npy'), pvals)
 np.save(opj(outpath, 'csevscs2_ttest_tvals.npy'), tvals)
-
-# #############################################################################
-# FDR
-# Reshape data in a single vector
-# testdata = np.reshape(diff_data, (shape[0], shape[1]*shape[2]))
-# tval = ttest_1samp_no_p(testdata, sigma=1e-3)
-# pval = scipy.stats.t.sf(np.abs(tval), shape[0]-1)*2  # two-sided pvalue
-# _, pval = mne.stats.fdr_correction(pval, alpha=param['alpha'])
-# ###########################################################################
-
-# #############################################################################
-# Permutation
-# Reshape data in a single vector
-# shape = diff_data.shape
-# testdata = np.reshape(diff_data, (shape[0], shape[1]*shape[2]))
-# tval, pval, _ = permutation_t_test(testdata, n_permutations=param['nperms'],
-#                                    n_jobs=param['njobs'])
-
-# ###########################################################################
-
-
-# Reshape in time x chan
-# pvals = np.reshape(pval, (shape[1],
-#                           shape[2]))
-# tvals = np.reshape(tval, (shape[1],
-#                           shape[2]))
-
-# np.save(opj(outpath, 'cuesdiff_ttest_pvals.npy'), pvals)
-# np.save(opj(outpath, 'cuesdiff_ttest_tvals.npy'), tvals)
-# np.save(opj(outpath, 'resamp_times.npy'), pdat.times)
-
-
-# # TFCE
-# # Same thing but using a 4-way ANOVA instead
-# def stat_fun(*args):  # Custom ANOVA for permutation
-#     return mne.stats.f_mway_rm(np.swapaxes(args, 1, 0),  # Swap sub and cond
-#                                factor_levels=[4],
-#                                effects='A',
-#                                return_pvals=False,
-#                                correction=True)[0]
-
-
-# # Use TFCE
-# tfce_dict = dict(start=0, step=0.2)
-# # Run the permuted ANOVA
-# shape = anova_data.shape
-# F_obs, clusters, pvals, h0 = \
-#     mne.stats.spatio_temporal_cluster_test(anova_data,
-#                                            stat_fun=stat_fun,
-#                                            threshold=tfce_dict,
-#                                            connectivity=connect,
-#                                            tail=1,  # One tail cause anova
-#                                            n_permutations=param['nperms'],
-#                                            seed=param['random_state'],
-#                                            max_step=1,
-#                                            check_disjoint=True,
-#                                            n_jobs=param['njobs'],
-#                                            out_type='mask')
-
-# # # ######################## FDR #######################################
-# # anova_data_uni = np.swapaxes(np.stack(anova_data), 1, 0)
-# # shape = anova_data_uni.shape
-# # anova_data_uni = np.reshape(anova_data_uni, (shape[0], shape[1],
-# #                                              shape[2]*shape[3]))
-
-# # F_obs, pvals = mne.stats.f_mway_rm(anova_data_uni,  # Swap sub and cond
-# #                                    factor_levels=[4],
-# #                                    effects='A',
-# #                                    return_pvals=True,
-# #                                    correction=True)
-# # _, pvals = mne.stats.fdr_correction(pvals, alpha=param['alpha'])
-# # # ######################## FDR #######################################
-
-
-# # Reshape time x freq
-# pvals = np.reshape(pvals, (shape[2],
-#                            shape[3]))
-# F_obsout = np.reshape(F_obs, (shape[2],
-#                               shape[3]))
-
-# np.save(opj(outpath, 'cues4_anova_pvals.npy'), pvals)
-# np.save(opj(outpath, 'cues4_anova_Fvals.npy'), F_obsout)
-# np.save(opj(outpath, 'resamp_times.npy'), pdat.times)

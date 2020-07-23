@@ -10,15 +10,12 @@ import os
 from os.path import join as opj
 from bids import BIDSLayout
 from mne.stats import ttest_1samp_no_p
-# from mne.stats import spatio_temporal_cluster_1samp_test as perm1samp
-# from functools import partial
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LinearRegression
 from sklearn.pipeline import make_pipeline
 from mne.decoding import Vectorizer
 from mne.time_frequency import read_tfrs
 import scipy
-from functools import partial
 from mne.stats import spatio_temporal_cluster_1samp_test as clust_1s_ttest
 
 ###############################
@@ -31,19 +28,18 @@ part = ['sub-' + s for s in layout.get_subject()]
 pd.options.mode.chained_assignment = None  # default='warn'
 
 # Outpath for analysis
-outpath = '/data/derivatives/statistics/tfr_modelbased_ols'
+outpath = '/data/derivatives/statistics/tfr_modelbased_single'
 if not os.path.exists(outpath):
     os.mkdir(outpath)
 
-outpath = '/data/derivatives/statistics/tfr_modelbased_ols'
+outpath = '/data/derivatives/statistics/tfr_modelbased_single'
 if not os.path.exists(outpath):
     os.mkdir(outpath)
 
 param = {
 
-
     # Njobs for permutations
-    'njobs': 20,
+    'njobs': 12,
     # Alpha Threshold
     'alpha': 0.05,
     # Number of permutations
@@ -52,7 +48,6 @@ param = {
     'random_state': 23,
     # excluded participants
     'excluded': ['sub-24', 'sub-31', 'sub-35', 'sub-51'],
-
 }
 
 part = [p for p in part if p not in param['excluded']]
@@ -95,8 +90,7 @@ for p in part:
     # Don't test baseline to reduce computational demands
     epo = epo.crop(tmin=0, tmax=1)
 
-    # If not empty
-    if len(df) != 0:
+    for regvar in regvars:
 
         # Vectorize, Zscore, Linear
         clf = make_pipeline(Vectorizer(),
@@ -108,7 +102,7 @@ for p in part:
             df[regvar + '_z'] = ((df[regvar] - np.average(df[regvar]))
                                  / np.std(df[regvar]))
 
-        no = [r + '_z' for r in regvars]
+        no = [regvar + '_z']
         # Fit regression
         clf.fit(epo.data, df[no])
 
@@ -191,25 +185,9 @@ for idx, regvar in enumerate(regvars):
 
     np.save(opj(outpath, 'ols_2ndlevel_tfr_pvals_' + regvar + '_.npy'),
             pvals[-1])
-    np.save(opj(outpath, 'ols_2ndlevel_tfr_tvals_' + regvar + '_.npy'), tvals)
+    np.save(opj(outpath, 'ols_2ndlevel_tfr_tvals_' + regvar + '_.npy'),
+            tvals)
 
-
-    # FDR
-    # Reshape data in a single vector for t-test
-
-    # # t-test
-    # testdata = allbetas[:, idx, ::]
-    # shapet = testdata.shape
-    # testdata = testdata.reshape(shapet[0], shapet[1] * shapet[2] * shapet[3])
-    # tval = ttest_1samp_no_p(testdata, sigma=1e-3)
-    # pval = scipy.stats.t.sf(
-    #     np.abs(tval), shapet[0] - 1) * 2  # two-sided pvalue
-
-    # # FDR correction
-    # _, pval = mne.stats.fdr_correction(pval, alpha=param['alpha'])
-
-    # tvals.append(np.reshape(tval, shapet[1:]))
-    # pvals.append(np.reshape(pval, shapet[1:]))
 
 tvals = np.stack(tvals)
 pvals = np.stack(pvals)

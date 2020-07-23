@@ -1,7 +1,14 @@
+#-*- coding: utf-8  -*- 
+""" 
+Author: michel-pierre.coll
+Date: 2020-07-23 12:01:58
+Description:
+"""
+
+
+
 # Load packages
 library(lme4)
-
-
 
 # Load data
 data = read.csv('/data/derivatives/task-fearcond_alldata.csv')

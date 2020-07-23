@@ -29,9 +29,9 @@ part = ['sub-' + s for s in layout.get_subject()]
 pd.options.mode.chained_assignment = None  # default='warn'
 
 # Outpaths for analysis
-outpath = '/data/derivatives/statistics/erps_modelbased_ols'
+outpath = '/data/derivatives/statistics/erps_modelbased_ols_ridge'
 
-outfigpath = '/data/derivatives/figures/erps_modelbased_ols'
+outfigpath = '/data/derivatives/figures/erps_modelbased_ols_ridge'
 if not os.path.exists(outfigpath):
     os.mkdir(outfigpath)
 param = {
@@ -81,7 +81,7 @@ chan_to_plot = ['POz', 'Pz']
 regvarsnamestopo = ['Expectation', 'Irr.\nuncertainty', 'Est.\nuncertainty']
 
 for ridx, regvar in enumerate(regvars):
-    fig = plt.figure(figsize=(7, 7))
+    fig = plt.figure(figsize=(8, 6))
 
     regvarname = regvarsnamestopo[ridx]
 
@@ -129,7 +129,7 @@ for ridx, regvar in enumerate(regvars):
 
 for c in chan_to_plot:
     for ridx, regvar in enumerate(regvars):
-        fig, line_axis = plt.subplots(1, 1, figsize=(5, 5))
+        fig, line_axis = plt.subplots(1, 1, figsize=(8, 6))
         regvarname = regvarsnames[ridx]
         all_epos.metadata.reset_index()
         nbins = 4
@@ -196,7 +196,7 @@ for c in chan_to_plot:
 
 for c in chan_to_plot:
     for ridx, regvar in enumerate(regvars):
-        fig, line_axis = plt.subplots(1, 1, figsize=(5, 5))
+        fig, line_axis = plt.subplots(1, 1, figsize=(8, 6))
 
         regvarname = regvarsnames[ridx]
         all_epos.metadata.reset_index()
@@ -214,6 +214,8 @@ for c in chan_to_plot:
 
         line_axis.set_ylabel('Beta (' + regvarname + ')',
                              fontdict={'size': param['labelfontsize']})
+        line_axis.set_xlabel('Time (ms)',
+                        fontdict={'size': param['labelfontsize']})
         # line_axis[0].tick_params(labelsize=12)
 
         line_axis.plot(all_epos[0].times * 1000,
@@ -224,7 +226,7 @@ for c in chan_to_plot:
                                mean - sem, mean + sem, alpha=0.3,
                                facecolor=clrs[0])
         # Make it nice
-        line_axis.set_ylim((-0.1, 0.3))
+        # line_axis.set_ylim((-0.1, 0.3))
 
         line_axis.axhline(0, linestyle=':', color='k')
         line_axis.axvline(0, linestyle=':', color='k')

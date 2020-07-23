@@ -463,8 +463,8 @@ for col in lppcols:
                                yerr=dat_plot_se[col], label=label,
                                marker=marker, color=color, ecolor=color,
                                linestyle=linestyle, markersize=8, linewidth=2)
-    for line in [1.5, 2.5, 3.5, 4.5, 5.5, 6.5]:
-        line_axis.axvline(x=line, linestyle=':', color='k')
+    # for line in [1.5, 2.5, 3.5, 4.5, 5.5, 6.5]:
+    #     line_axis.axvline(x=line, linestyle=':', color='k')
 
     line_axis.set_ylabel('Mean amplitude\n400-800 ms (Z scored)',
                          fontsize=param['labelfontsize'])

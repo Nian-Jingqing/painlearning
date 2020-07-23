@@ -5,9 +5,6 @@ Date: 2020-07-14 08:49:37
 Description: TFR statistical analyses for pain conditioning task
 TODO:
 """
-
-
-
 import mne
 import pandas as pd
 import numpy as np
@@ -19,8 +16,7 @@ from mne.time_frequency import read_tfrs
 import scipy
 from mne.stats import spatio_temporal_cluster_1samp_test as perm1samp
 
-# from mne.stats import spatio_temporal_cluster_1samp_test as perm1samp
-# !pip install git+https://github.com/larsoner/mne-python@conn
+
 ###############################
 # Parameters
 ###############################
@@ -84,71 +80,73 @@ for cond in conditions:
 
 anova_data = np.stack(anova_data)
 
+# Save times and freqs for plots
+np.save(opj(outpath, 'resamp_times.npy'), data['CS+'][0].times)
+np.save(opj(outpath, 'resamp_freqs.npy'), data['CS+'][0].freqs)
+
+
+
 # # Take difference of interest for each part
-diff_data = np.empty((1,) + anova_data.shape[1:])
-diff1 = np.empty((1,) + anova_data.shape[1:])
-diff2 = np.empty((1,) + anova_data.shape[1:])
+csplusvscs1 = np.empty((1,) + anova_data.shape[1:])
+csevscs2 = np.empty((1,) + anova_data.shape[1:])
+csplusvscse = np.empty((1,) + anova_data.shape[1:])
+csplusvscse2 = np.empty((1,) + anova_data.shape[1:])
 
+# Calculate differences
 for s in range(anova_data.shape[1]):
-    diff_data[0, s, :, :, :] = ((anova_data[0, s, :, :, :]
-                                 - anova_data[1, s, :, :, :])
-                                - (anova_data[2, s, :, :, :]
-                                   - anova_data[3, s, :, :, :]))
 
+    csplusvscs1[0, s, ::] = (anova_data[2, s, :] - anova_data[0, s, :])
+    csevscs2[0, s, ::] = (anova_data[3, s, :] - anova_data[1, s, :])
+    csplusvscse[0, s, ::] = ((anova_data[2, s, :] - anova_data[3, s, :]) - (anova_data[0, s, :] - anova_data[1, s, :]))
 
-diff_data = np.squeeze(diff_data)
-diff1 = np.squeeze(diff1)
-diff2 = np.squeeze(diff2)
+csplusvscs1 = np.squeeze(csplusvscs1)
+csevscs2 = np.squeeze(csevscs2)
+csplusvscse = np.squeeze(csplusvscse)
+
+shape = csplusvscs1.shape
 
 ###############################################################
 # TFCE to test interaction (difference of difference)
 ###############################################################
 
-testdata = np.swapaxes(diff_data, 1, 3)
-shapet = testdata.shape
+for diff_data, savename in zip([csplusvscs1, csevscs2, csplusvscse],
+                               ['csplusvscs1', 'csevscs2', 'csplusvscse']):
+    testdata = np.swapaxes(diff_data, 1, 3)
+    shapet = testdata.shape
 
-# Find connectivity structure
-chan_connect, _ = mne.channels.find_ch_adjacency(data['CS-1'][0].info, 'eeg')
+    # Find connectivity structure
+    chan_connect, _ = mne.channels.find_ch_adjacency(data['CS-1'][0].info,
+                                                     'eeg')
 
 
-connectivity = mne.stats.combine_adjacency(len(data['CS-1'][0].freqs),
-                                           chan_connect)
+    adjacency = mne.stats.combine_adjacency(len(data['CS-1'][0].freqs),
+                                            chan_connect)
 
-# data is (n_observations, n_times*n_vertices)
-testdata = np.reshape(testdata, (shapet[0], shapet[1], shapet[2]*shapet[3]))
-tval, clusters, pval, H0 = perm1samp(testdata,
-                                     n_jobs=param['njobs'],
-                                     threshold=dict(start=0, step=0.5),
-                                     connectivity=connectivity,
-                                     max_step=1,
-                                     n_permutations=param['nperms'])
+    # data is (n_observations, n_times*n_vertices)
+    testdata = np.reshape(testdata, (shapet[0], shapet[1],
+                                     shapet[2]*shapet[3]))
+    tval, clusters, pval, H0 = perm1samp(testdata,
+                                        n_jobs=param['njobs'],
+                                        threshold=dict(start=0, step=0.5),
+                                        adjacency=adjacency,
+                                        max_step=1,
+                                        n_permutations=param['nperms'])
 
-# Reshape everything in chan x freq x time
-tvals = np.reshape(tval, (shapet[1],
-                          shapet[2],
-                          shapet[3]))
-tvals = np.swapaxes(tvals, 0, 2)
+    # Reshape everything in chan x freq x time
+    tvals = np.reshape(tval, (shapet[1],
+                            shapet[2],
+                            shapet[3]))
+    tvals = np.swapaxes(tvals, 0, 2)
 
-pvals = np.reshape(pval, (shapet[1],
-                          shapet[2],
-                          shapet[3]))
-pvals = np.swapaxes(pvals, 0, 2)
+    pvals = np.reshape(pval, (shapet[1],
+                            shapet[2],
+                            shapet[3]))
+    pvals = np.swapaxes(pvals, 0, 2)
 
-dat = data[cond][-1].copy()
-dat.data = tvals
-dat.plot_topomap()
-print(np.max(np.abs(tvals)))
 
-dat = data[cond][-1].copy()
-dat.data = np.where(pvals < 0.05, 1, 0)
-dat.plot_topomap()
-dat.plot('POz')
-print(np.min(np.abs(pvals)))
-
-###############################################################
-# Save for plots
-
-np.save(opj(outpath, 'cuesdiff_tfr_ttest_pvals.npy'), pvals)
-np.save(opj(outpath, 'cuesdiff_tfr_ttest_tvals.npy'), tvals)
-np.save(opj(outpath, 'resamp_times.npy'), data['CS+'][0].times)
-np.save(opj(outpath, 'resamp_freqs.npy'), data['CS+'][0].freqs)
+    ###############################################################
+    # Save for plots
+    np.save(opj(outpath, 'cuesdiff_tfr_ttest_pvals' + savename + '.npy'),
+            pvals)
+    np.save(opj(outpath, 'cuesdiff_tfr_ttest_tvals' + savename + '.npy'),
+            tvals)
